@@ -114,14 +114,33 @@ That also means my earlier conclusion that a custom entity was unreachable *beca
 `.epe` could not be written* was wrong. The real blocker for adding geometry is elsewhere
 and is still open; see Open questions.
 
-**Why adding geometry is blocked.** The body's collision is a Havok `hknpExternMeshShape`
-inside `<entity>.physicsc` — an *external* mesh shape, which points at the render mesh
-instead of baking its own copy. So mesh counts and collision are coupled, and adding
-geometry means regenerating collision in lockstep. Removing the file crashes even with no
-geometry change at all, so it is genuinely load-bearing. `.physicsc` is a Havok binary
-that no tool I could find will author, and I could not separate "the collision binding is
-what rejects the new counts" from "some other check is". The coupling is established; the
-consequence being *the* cause is not.
+**Why adding geometry is blocked.** This one took a while to get honest about, because I
+first blamed two things and both turned out to be innocent.
+
+The body's collision is a Havok `hknpExternMeshShape` inside `<entity>.physicsc`, a
+Havok 2014.1 serialised binary with `__classnames__`/`__types__`/`__data__` sections.
+Removing that file crashes even with no geometry change, so it is genuinely
+load-bearing. My theory was that it or the `.epe` *stores* the mesh counts, and that
+updating them would be all that was needed. Both are false:
+
+- The `.epe` contains **no** mesh vertex or index counts. 17 of 18 body block counts are
+  absent from the file, and random control values return zero hits, so the absence is
+  real rather than a search failure.
+- The `.physicsc` holds **no baked copy of the render mesh** — 0 of 1024 body vertices
+  appear verbatim in it — so the extern reference is genuine and there are no stale
+  counts in there to patch either.
+
+And the appended geometry was not malformed on my side. Re-auditing the crashed builds
+offline: whole-file re-encode byte-identical, zero out-of-range indices, zero degenerate
+triangles, zero non-finite floats. Well-formed input, hard crash.
+
+So the rejection is not a stale declaration being mismatched. It happens inside the
+engine/Havok path that derives collision from the render mesh at load, on input that is
+internally consistent. Nothing is patchable, because there is nothing stored to patch.
+
+That matters for where to go next: the remaining work is *authoring* Havok collision, and
+the code that does it is the same code the 3ds Max Havok plugin drives. See Open
+questions.
 
 **Registering a genuinely new vehicle** needs no patch to any DLL. The public console mod
 (`jc3-console-thingy`) hooks the game's property-file reader, lifts one property out of
@@ -187,15 +206,17 @@ Two lessons from this specific sequence:
   each vertex is bit-identical; archive diff confirming one changed file per edit.
 - **In game:** the car spawns, drives, steers and brakes; body panels, glass and lamps all
   move together; wheels and arches provably untouched.
-- **Not verified:** why changed vertex counts crash. I proved the physics file is
-  load-bearing (removing it crashes, with no geometry change at all) and that the collision
-  is an external mesh shape bound to the render mesh, but I could not regenerate physics, so
-  the two could never be tested together.
+- **Not verified:** why changed vertex counts crash. I eliminated the two mechanisms I
+  blamed — the `.epe` stores no mesh counts, the `.physicsc` stores no baked mesh or
+  counts — and confirmed the appended files were well-formed on every offline check. So
+  the cause is inside the load-time mesh-to-collision derivation, but I never observed it
+  and cannot name the exact check.
 
-  Note also that the pack author of a large, long-lived custom-vehicle modpack lists an
-  intermittent vehicle crash in his own known issues as "I have no idea what causes it now".
-  Sporadic vehicle crashes are therefore not necessarily exclusive to naive edits, and a
-  clean deterministic rule and an intermittent bug should not be conflated.
+  One caveat against over-trusting the pattern: the author of a large, long-lived
+  custom-vehicle modpack lists an intermittent vehicle crash in his own known issues as
+  "I have no idea what causes it now". Sporadic vehicle crashes therefore may not be
+  exclusive to naive edits, and a clean deterministic rule and an intermittent bug should
+  not be conflated from three samples.
 
 ## Gotchas
 
@@ -221,13 +242,17 @@ Two lessons from this specific sequence:
 
 3. **Symptom:** any edit that changes vertex or index counts crashes — including on a plain
    non-deform block, and including on a part as trivial as a number plate. **Cause:** the
-   entity is structurally validated at load. **Fix:** none available. Reshape by moving
-   existing vertices; treat added geometry as requiring collision regeneration too.
+   rejection is in the load-time derivation of collision from the render mesh, not in any
+   declaration you could go and update (see How the game works — the `.epe` has no counts
+   and the `.physicsc` has no baked mesh). **Fix:** none available. Reshape by moving
+   existing vertices; added geometry needs collision regenerated by a Havok tool.
 
 4. **Symptom:** removing `sportsmuscle.physicsc` from an otherwise unmodified vehicle crashes
-   it. **Cause:** it is load-bearing, and it holds the body's collision as a Havok
+   it. **Cause:** it is load-bearing, and the body's collision is a Havok
    `hknpExternMeshShape` pointing at the render mesh. **Fix:** keep it. If you add geometry
-   you must regenerate it, which is the real blocker.
+   you must regenerate it, which is the real blocker. Note this file is a Havok 2014.1
+   binary — read its class names straight out of the `__classnames__` section rather than
+   guessing at a format.
 
 5. **Symptom:** planning a pipeline around JC Model Renderer. **Cause:** it implements only
    three JC3 block types (character, character skin, general MkIII) and **cannot read or
@@ -270,6 +295,16 @@ Two lessons from this specific sequence:
 11. **Symptom:** `ConvertAdf` throws on `.epe`. **Cause:** it is a property container, not ADF.
     **Fix:** use the property converter for reading. (For writing, see Gotcha 1.)
 
+12. **Symptom:** a validation script reports thousands of violations in files you know are
+    fine — including in blocks you never touched. **Cause:** the checker, not the data. I
+    read four int32s at offset +12 of a stride-24 deform vertex as bone indices, and got
+    4,249 "out of palette" hits on a block I had edited *and* 4,223 on an untouched one.
+    Run the checker against **pristine** files: it flagged 4,057 on an unedited
+    `body_lod1.rbm`, which is what proved the probe wrong. **Fix:** a checker that fires on
+    known-good input is telling you about itself. Unedited blocks sitting in the same file
+    are a free control — use them before believing a violation report. (The deform vertex
+    layout here is still unverified; do not trust a bone reading from it.)
+
 ## Assets
 
 The source vehicle model was a third-party `.pskx` skeletal mesh (chunked `ACTRHEAD`
@@ -294,20 +329,21 @@ cost — most failures were caught without launching the game at all.
 
 ## Open questions
 
-- **The real blocker, and the most promising route:** the physics half. The custom-vehicle
-  mods I examined do *not* appear to author physics from scratch — they add vehicles by
-  **porting them from other Avalanche titles** (theHunter: COTW, GenZ, Just Cause 2, JC4),
-  which is viable because those titles share the container format: the archive toolset
-  documents Just Cause 3 and theHunter: COTW as the same archive version with AAF
-  compression. Models and physics come across together.
+- **The real blocker, and now the only one:** authoring Havok collision for geometry that
+  did not exist when the `.physicsc` was baked. Everything else is closed off — packaging,
+  the property file, entity identity, spawn registration, and the mesh codec are all
+  solved or ruled out. There is nothing left in the files to patch.
 
-  That points at a toolchain rather than a person: **ApexMax**, the 3ds Max plugin for Apex
-  Engine formats, is documented as working with **HavokMax**, generating an external preset
-  for the Havok plugin. So an Apex-to-Havok bridge did exist as a product. If you need to
-  author collision for new geometry, that ecosystem — not a from-scratch reverse
-  engineering job — is where to look. (Both `ApexLib` and `ApexToolset` are archived and
-  contain no `.epe` or physics tooling: archives and textures only, and material/property
-  serialisation respectively.)
+  This is a toolchain problem, not a reverse-engineering problem. **ApexMax**, the 3ds Max
+  plugin for Apex Engine formats, is documented as working with **HavokMax**, generating an
+  external preset for the Havok plugin — so an Apex-to-Havok bridge existed as a product,
+  and it drives the very code path that rejects new geometry here. If you only chase one
+  lead, chase that one. The custom-vehicle mods I checked support this: they appear to
+  **port** vehicles from other Avalanche titles (theHunter: COTW, GenZ, JC2, JC4), bringing
+  models and physics across together, rather than authoring collision — and that works
+  because the archive toolset documents JC3 and theHunter: COTW as the same archive version
+  with AAF compression. (`ApexLib` and `ApexToolset` are both archived and contain no
+  `.epe` or physics tooling: archives and textures, and material serialisation.)
 
 - Reference for the custom-vehicle pipeline: *Meme Vehicle Pack*
   (https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack) by Luke JC
