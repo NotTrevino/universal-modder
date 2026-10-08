@@ -114,33 +114,42 @@ That also means my earlier conclusion that a custom entity was unreachable *beca
 `.epe` could not be written* was wrong. The real blocker for adding geometry is elsewhere
 and is still open; see Open questions.
 
-**Why adding geometry is blocked.** This one took a while to get honest about, because I
-first blamed two things and both turned out to be innocent.
+**Why adding geometry is blocked.** The body's collision is a Havok `hknpExternMeshShape`
+inside `<entity>.physicsc` — a Havok 2014.1 serialised binary with `__classnames__`,
+`__types__` and `__data__` sections. Removing that file crashes even with no geometry
+change, so it is genuinely load-bearing.
 
-The body's collision is a Havok `hknpExternMeshShape` inside `<entity>.physicsc`, a
-Havok 2014.1 serialised binary with `__classnames__`/`__types__`/`__data__` sections.
-Removing that file crashes even with no geometry change, so it is genuinely
-load-bearing. My theory was that it or the `.epe` *stores* the mesh counts, and that
-updating them would be all that was needed. Both are false:
+I looked everywhere the expected vertex or index count could be stored:
+  • the `.epe` contains **no** mesh counts (17 of 18 body block counts absent; random
+    controls return zero hits);
+  • the `.physicsc` holds **no baked copy of the render mesh** (0 of 1024 body vertices
+    appear verbatim) and therefore no counts to patch;
+  • every other file type in the entity (`.lod`, `.ctunec`, `.pfxc`, `.etunec`,
+    `.ftunec`, `.trim`, `.stringlookup`, `.xml`) was inventoried and none references
+    the render mesh or holds a plausible count;
+  • the file header contains only bbox, block count and tag — no vertex or index count.
 
-- The `.epe` contains **no** mesh vertex or index counts. 17 of 18 body block counts are
-  absent from the file, and random control values return zero hits, so the absence is
-  real rather than a search failure.
-- The `.physicsc` holds **no baked copy of the render mesh** — 0 of 1024 body vertices
-  appear verbatim in it — so the extern reference is genuine and there are no stale
-  counts in there to patch either.
+To isolate whether the engine cares about vertex count, index count, or both, I ran a
+bisection:
+  • **test-018** – dropped the last triangle of body block 0 (index count 3168 → 3165,
+    vertex count and vertex bytes untouched) → **crash**.
+  • **test-019** – duplicated one vertex of body block 0 (vertex count 1024 → 1025,
+    index buffer untouched) → **crash**.
 
-And the appended geometry was not malformed on my side. Re-auditing the crashed builds
-offline: whole-file re-encode byte-identical, zero out-of-range indices, zero degenerate
-triangles, zero non-finite floats. Well-formed input, hard crash.
+Therefore the engine rejects **any** change to either count, even when the other count
+is held constant and the modified buffer is otherwise well‑formed (byte‑identical
+re‑encode, zero bbox error, no out‑of‑range indices, no degenerate triangles, no
+non‑finite floats).
 
-So the rejection is not a stale declaration being mismatched. It happens inside the
-engine/Havok path that derives collision from the render mesh at load, on input that is
-internally consistent. Nothing is patchable, because there is nothing stored to patch.
+Since no file in the entity stores the expected count, the check must live either in
+the game executable/DLL or in an asset we have not yet inventoried (e.g., an animation
+controller or handling file). Given that the Havok collision shape is an extern mesh
+reference to the render mesh, the most plausible location is inside the Havok loader or
+the engine’s mesh‑to‑Havok conversion path — which would mean the expected count is
+compiled into Havok or into the engine’s call to Havok.
 
-That matters for where to go next: the remaining work is *authoring* Havok collision, and
-the code that does it is the same code the 3ds Max Havok plugin drives. See Open
-questions.
+Without a way to change that expectation, added geometry remains blocked. The only
+workaround is to displace existing vertices, which leaves both counts untouched.
 
 **Registering a genuinely new vehicle** needs no patch to any DLL. The public console mod
 (`jc3-console-thingy`) hooks the game's property-file reader, lifts one property out of
@@ -329,32 +338,25 @@ cost — most failures were caught without launching the game at all.
 
 ## Open questions
 
-- **The real blocker, and now the only one:** authoring Havok collision for geometry that
-  did not exist when the `.physicsc` was baked. Everything else is closed off — packaging,
-  the property file, entity identity, spawn registration, and the mesh codec are all
-  solved or ruled out. There is nothing left in the files to patch.
+- **Where does the expected vertex/index count live?** The bisection proved that
+  changing either count crashes, yet no file in the entity stores those numbers.
+  The check must be in the game executable, a DLL, or an asset we have not yet
+  inventoried (e.g., an animation controller, handling file, or LOD settings block).
+  If you can locate and patch that expectation, then added geometry becomes possible
+  by updating the count and providing matching geometry. Without that, the only
+  workaround is to stay within the existing vertex and index budgets.
 
-  This is a toolchain problem, not a reverse-engineering problem. **ApexMax**, the 3ds Max
-  plugin for Apex Engine formats, is documented as working with **HavokMax**, generating an
-  external preset for the Havok plugin — so an Apex-to-Havok bridge existed as a product,
-  and it drives the very code path that rejects new geometry here. If you only chase one
-  lead, chase that one. The custom-vehicle mods I checked support this: they appear to
-  **port** vehicles from other Avalanche titles (theHunter: COTW, GenZ, JC2, JC4), bringing
-  models and physics across together, rather than authoring collision — and that works
-  because the archive toolset documents JC3 and theHunter: COTW as the same archive version
-  with AAF compression. (`ApexLib` and `ApexToolset` are both archived and contain no
-  `.epe` or physics tooling: archives and textures, and material serialisation.)
+- **If the expectation is compiled into the engine/Havok path**, then the only way to
+  author new collision is to use the same toolchain that the original developers used.
+  The strongest remaining lead is **ApexMax**, the 3ds Max plugin for Apex Engine
+  formats, which is documented as working with **HavokMax** to generate an external
+  preset for the Havok plugin. If such a toolchain can be obtained or rebuilt, it
+  would produce a `.physicsc` that the engine accepts, allowing added geometry by
+  regenerating collision from the new render mesh.
+
+  (`ApexLib` and `ApexToolset` are both archived and contain no `.epe` or physics
+  tooling: archives and textures only, and material/property serialisation.)
 
 - Reference for the custom-vehicle pipeline: *Meme Vehicle Pack*
   (https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack) by Luke JC
   (https://videogamemods.com/u/lukejc3mp-0021).
-- Whether the count-change crash is *specifically* the collision binding or a second
-  structural check. Removing the physics file crashes, so the two cannot be separated
-  without being able to regenerate it.
-- Whether a byte-preserving `.epe` patcher plus a spawn-table row would let a custom entity
-  load without ever writing an `.epe`. **Partly answered, and no longer the interesting
-  question:** the stock converter *can* write an `.epe` once its lossy output is repaired
-  against the original (Gotcha 1), and the parts list is editable, and a `name_hash` is
-  just a hash of a string `HashName` already computes. So the packaging, identity and
-  registration halves of a custom entity are all solved. Physics is the only thing left,
-  which is the same wall as adding geometry — one wall, not two.
