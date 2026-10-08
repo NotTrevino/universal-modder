@@ -28,10 +28,16 @@ tags: ['vehicles', 'mesh', 'rbm', 'avalanche-engine', 'havok', 'structural-valid
 > I reshaped a Just Cause 3 vehicle from a muscle convertible into a low wide wedge by
 > rewriting vertex positions in its model files, repacking the vehicle archive and
 > dropping it in the dropzone. It runs in the real game and the change is dramatic.
-> Adding *new* geometry — fins, enclosed wheel arches — crashes the game, and after
-> five experiments I can say exactly why: the engine validates the vehicle entity's
-> structure at load, and the collision shape is a Havok external mesh bound to the
-> render mesh.
+> Adding *new* geometry — fins, enclosed wheel arches — crashes the game and I could not
+> fix it. The engine validates the vehicle entity's structure at load, and the body's
+> collision is a Havok external mesh bound to the render mesh, so geometry and collision
+> are coupled. But "coupled" is as far as the evidence goes: I never regenerated physics,
+> so I cannot rule out a second structural check I never found.
+>
+> The other half of the story is a mistake worth reading. I concluded the entity property
+> file could not be written at all and closed off a whole route on that basis. It was
+> wrong. The tool was lossy in a specific, repairable way, and after fixing it the file
+> round-trips and the vehicle loads. See Gotcha 1.
 
 ## Setup
 
@@ -89,21 +95,33 @@ empirical:
 | change to the entity | result |
 |---|---|
 | float positions inside existing vertices, counts untouched | **loads and renders** |
+| `.epe` re-encoded naively by the stock converter | crash |
+| `.epe` re-encoded with the pad bytes restored | **loads and drives** |
 | vertex or index counts changed, deform block | crash |
 | vertex or index counts changed, plain block | crash |
 | any file removed from the entity, geometry untouched | crash |
-| `.epe` re-encoded | crash |
 
 The engine checks the entity's structure at load and rejects changes to it with a hard
-crash rather than a degraded vehicle. File set, vertex counts, index counts, block count
-and sentinel layout must all survive. Only in-place edits of fixed-size fields are safe.
+crash rather than a degraded vehicle. File set, vertex counts, index counts and block
+count must all survive; only in-place edits of fixed-size fields are safe.
+
+The `.epe` row is the interesting one, because it shows the rule is not "this tool is
+broken" but "this representation is lossy". The stock property converter round-trips an
+`.epe` only if you repair what its XML cannot carry. Once repaired it is a perfectly good
+`.epe` editor — which is what the community guide says, and which I initially contradicted.
+
+That also means my earlier conclusion that a custom entity was unreachable *because the
+`.epe` could not be written* was wrong. The real blocker for adding geometry is elsewhere
+and is still open; see Open questions.
 
 **Why adding geometry is blocked.** The body's collision is a Havok `hknpExternMeshShape`
 inside `<entity>.physicsc` — an *external* mesh shape, which points at the render mesh
 instead of baking its own copy. So mesh counts and collision are coupled, and adding
-geometry means regenerating collision in lockstep. `.physicsc` is a Havok binary that no
-tool I could find will author. A shipped custom-vehicle mod works because its author
-provided the custom mesh *and* a matching 202 KB `.physicsc` together.
+geometry means regenerating collision in lockstep. Removing the file crashes even with no
+geometry change at all, so it is genuinely load-bearing. `.physicsc` is a Havok binary
+that no tool I could find will author, and I could not separate "the collision binding is
+what rejects the new counts" from "some other check is". The coupling is established; the
+consequence being *the* cause is not.
 
 **Registering a genuinely new vehicle** needs no patch to any DLL. The public console mod
 (`jc3-console-thingy`) hooks the game's property-file reader, lifts one property out of
@@ -136,6 +154,32 @@ table already lists it.
 7. Deploy with a script that asserts the artifact's size **and** sha256 before copying, and
    that offers a one-command rollback to a known-good build.
 
+## Editing the entity property file
+
+Now a working route, thanks to Gotcha 1, and it costs one round trip:
+
+1. Unpack the vanilla `.epe`, convert it to XML with the stock property converter.
+2. Edit the XML — the parts list, the entity's root `name`, anything with a name.
+3. Convert back to binary.
+4. **Repair against the original**: diff the result byte-by-byte against the untouched
+   vanilla file, and wherever the original held `0x50` and the writer emitted `0x00`, put
+   `0x50` back.
+5. Repack, unpack again, and confirm the entity is the *only* changed file.
+
+On a stock vehicle `.epe` (109,526 B) step 4 took the difference from 2,293 bytes to 104,
+and the vehicle loaded and drove. The residual is float32 last-digit rounding and ~45
+bytes of substituted defaults, both tolerated.
+
+Two lessons from this specific sequence:
+
+- **Diff against the original, never against the first generation of your own lossy
+  representation.** Comparing conversion output to conversion input proves nothing.
+- **Check what the bytes sit next to before naming them.** I called the `0x50` runs
+  `"PPPP"` sentinels from a hexdump glance. Context said otherwise — they follow
+  null-terminated strings, which is what told me they were padding, and padding is
+  *repairable* in a way a sentinel is not. The misnaming is what made the whole route
+  look closed.
+
 ## Verification
 
 - **Offline:** byte-exact round-trip over the donor tree; an oracle asserting that for every
@@ -143,20 +187,31 @@ table already lists it.
   each vertex is bit-identical; archive diff confirming one changed file per edit.
 - **In game:** the car spawns, drives, steers and brakes; body panels, glass and lamps all
   move together; wheels and arches provably untouched.
-- **Not verified:** whether the crash on added geometry is specifically the collision
-  binding rather than a second, undiscovered structural check. I proved the physics file is
-  load-bearing (removing it crashes) but could not regenerate it, so the combination was
-  never tested end to end.
+- **Not verified:** why changed vertex counts crash. I proved the physics file is
+  load-bearing (removing it crashes, with no geometry change at all) and that the collision
+  is an external mesh shape bound to the render mesh, but I could not regenerate physics, so
+  the two could never be tested together.
+
+  Note also that the pack author of a large, long-lived custom-vehicle modpack lists an
+  intermittent vehicle crash in his own known issues as "I have no idea what causes it now".
+  Sporadic vehicle crashes are therefore not necessarily exclusive to naive edits, and a
+  clean deterministic rule and an intermittent bug should not be conflated.
 
 ## Gotchas
 
 1. **Symptom:** re-encoding an `.epe` through the Gibbed property converter crashes the game
    instantly, with no other change. **Cause:** the XML representation cannot express the
-   `0x50505050` sentinel that the Avalanche property format uses for placeholder slots. A
-   stock vehicle `.epe` has 631 of them; the writer silently emits zeros, destroying the
-   container's placeholder structure. **Fix:** do not use that tool to write `.epe`. If you
-   must edit one, copy the file and patch bytes in place — and choose a replacement string
-   of *exactly* the same length so no length prefixes or container offsets move.
+   `0x50` **pad/flag bytes that sit immediately after null-terminated strings**, so the
+   writer emits zeros and destroys the container's structure. In a stock vehicle `.epe` this
+   is ~2,189 bytes — it is the bulk of the damage, and the first one sits right after the
+   root class string, which is why the whole entity dies. **Fix:** the converter *is*
+   usable; diff the output against the original and restore every byte where the original
+   held `0x50` and the writer wrote `0x00`. That drops the difference from 2,293 bytes to
+   104, and the result loads and drives normally. The residual 104 are last-digit float32
+   rounding plus ~45 bytes where the writer substitutes defaults (`0x00` → `0xFF`/`0xFE`/
+   `0x01`/`0x02`); those are tolerated by the game. My first diagnosis here was wrong — I
+   assumed the lost bytes were `"PPPP"` sentinels and dismissed the remainder as float
+   noise measured at misaligned offsets. Measuring properly showed neither.
 
 2. **Symptom:** deleting a file from the unpacked tree and repacking yields a 0-byte `.ee`
    and a `FileNotFoundException`. **Cause:** the packer treats a generated `@files.xml` as
@@ -239,15 +294,31 @@ cost — most failures were caught without launching the game at all.
 
 ## Open questions
 
-- **The real blocker, and the only promising route:** how was the shipped custom vehicle's
-  Havok `.physicsc` authored for a mesh that does not exist in vanilla? The reference mod is
-  *Meme Vehicle Pack* (https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack) by
-  Luke JC (https://videogamemods.com/u/lukejc3mp-0021), whose Dababy jeep has a wholly
-  custom body and unusual wheels. That is a question for a person, not a
-  reverse-engineering problem — ask the author, or Brooen, who wrote the JC3 RBM exporter.
+- **The real blocker, and the most promising route:** the physics half. The custom-vehicle
+  mods I examined do *not* appear to author physics from scratch — they add vehicles by
+  **porting them from other Avalanche titles** (theHunter: COTW, GenZ, Just Cause 2, JC4),
+  which is viable because those titles share the container format: the archive toolset
+  documents Just Cause 3 and theHunter: COTW as the same archive version with AAF
+  compression. Models and physics come across together.
+
+  That points at a toolchain rather than a person: **ApexMax**, the 3ds Max plugin for Apex
+  Engine formats, is documented as working with **HavokMax**, generating an external preset
+  for the Havok plugin. So an Apex-to-Havok bridge did exist as a product. If you need to
+  author collision for new geometry, that ecosystem — not a from-scratch reverse
+  engineering job — is where to look. (Both `ApexLib` and `ApexToolset` are archived and
+  contain no `.epe` or physics tooling: archives and textures only, and material/property
+  serialisation respectively.)
+
+- Reference for the custom-vehicle pipeline: *Meme Vehicle Pack*
+  (https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack) by Luke JC
+  (https://videogamemods.com/u/lukejc3mp-0021).
 - Whether the count-change crash is *specifically* the collision binding or a second
   structural check. Removing the physics file crashes, so the two cannot be separated
   without being able to regenerate it.
 - Whether a byte-preserving `.epe` patcher plus a spawn-table row would let a custom entity
-  load without ever writing an `.epe`. The packaging half of that is understood; the
-  physics half is not.
+  load without ever writing an `.epe`. **Partly answered, and no longer the interesting
+  question:** the stock converter *can* write an `.epe` once its lossy output is repaired
+  against the original (Gotcha 1), and the parts list is editable, and a `name_hash` is
+  just a hash of a string `HashName` already computes. So the packaging, identity and
+  registration halves of a custom entity are all solved. Physics is the only thing left,
+  which is the same wall as adding geometry — one wall, not two.
