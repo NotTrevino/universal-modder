@@ -268,8 +268,10 @@ Two lessons from this specific sequence:
    write a vehicle RBM at all**. Its release notes about "creating custom models" are about
    character/AMF meshes. **Fix:** for vehicle authoring look at `Brooen/RBM-Exporter`, which
    does target JC3 Carpaint/Window/Carlight. Note its own caveat: no deform support — it
-   writes plain blocks, which is also what 57 of 128 blocks in a working custom vehicle mod
-   use.
+   writes plain blocks. (A "custom" moped `.ee` found in a modpack looked like evidence that
+   plain blocks work in a shipped mod; diffed against the vanilla moped from `game35.tab` it
+   is 413/415 files byte-identical, RBMs and `.physicsc` included, and only two textures
+   differ. Diff a mod against its vanilla base before treating it as a geometry precedent.)
 
 6. **Symptom:** you cannot find the property the console mod spawner reads, no matter how
    many names you hash. **Cause:** that property has **no name** — it is an id-only field,
