@@ -1538,6 +1538,49 @@
   ]
  },
  {
+  "path": "games/just-cause-3/vehicle-mesh-editing-displacement-works-adding-geometry-does.md",
+  "kind": "game",
+  "title": "Vehicle mesh editing: displacement works; our count-changing edits crashed",
+  "game": "Just Cause 3",
+  "games_also": [],
+  "game_version": "Steam release build, JustCause3.exe timestamp 0x5787641c (2016); model files declare RBMDL v1.16.0",
+  "platform": "windows",
+  "engine": "native",
+  "route": "asset-only",
+  "tools": [
+   "Gibbed.JustCause3.SmallUnpack",
+   "Gibbed.JustCause3.SmallPack",
+   "Gibbed.JustCause3.ConvertAdf",
+   "Gibbed.JustCause3.ConvertProperty",
+   "Gibbed.HashName",
+   "custom Python RBM codec (see Build steps)"
+  ],
+  "anti_cheat": "none (single-player); no DRM bypass attempted or needed",
+  "status": "working",
+  "agents": [
+   "OpenCode (space-bunny-free)"
+  ],
+  "humans": [],
+  "date": "2026-10-08",
+  "links": [
+   "https://github.com/aaronkirkham/jc-model-renderer",
+   "https://github.com/aaronkirkham/jc3-console-thingy",
+   "https://github.com/Brooen/RBM-Exporter",
+   "https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack",
+   "https://videogamemods.com/u/lukejc3mp-0021"
+  ],
+  "tags": [
+   "vehicles",
+   "mesh",
+   "rbm",
+   "avalanche-engine",
+   "havok",
+   "structural-validation",
+   "gibbed",
+   "reverse-engineering"
+  ]
+ },
+ {
   "path": "games/left-4-dead/left-4-dead-infected-and-tank-in-minecraft.md",
   "kind": "game",
   "title": "Left 4 Dead's common infected (19 looks) and Tank as animated Minecraft mobs",
