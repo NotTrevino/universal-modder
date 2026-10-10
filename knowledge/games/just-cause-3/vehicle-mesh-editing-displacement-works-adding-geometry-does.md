@@ -1,6 +1,6 @@
 ---
 kind: game
-title: 'Vehicle mesh editing: displacement works, adding geometry does not'
+title: 'Vehicle mesh editing: displacement works; our count-changing edits crashed'
 game: Just Cause 3
 games_also: []
 game_version: 'Steam release build, JustCause3.exe timestamp 0x5787641c (2016); model files declare RBMDL v1.16.0'
@@ -23,16 +23,19 @@ links:
 tags: ['vehicles', 'mesh', 'rbm', 'avalanche-engine', 'havok', 'structural-validation', 'gibbed', 'reverse-engineering']
 ---
 
-# Vehicle mesh editing: displacement works, adding geometry does not
+# Vehicle mesh editing: displacement works; our count-changing edits crashed
 
 > I reshaped a Just Cause 3 vehicle from a muscle convertible into a low wide wedge by
 > rewriting vertex positions in its model files, repacking the vehicle archive and
 > dropping it in the dropzone. It runs in the real game and the change is dramatic.
-> Adding *new* geometry — fins, enclosed wheel arches — crashes the game and I could not
-> fix it. The engine validates the vehicle entity's structure at load, and the body's
-> collision is a Havok external mesh bound to the render mesh, so geometry and collision
-> are coupled. But "coupled" is as far as the evidence goes: I never regenerated physics,
-> so I cannot rule out a second structural check I never found.
+> My edits that added *new* geometry (fins, enclosed wheel arches), or changed a block's
+> vertex or index count in any way, crashed the game, and I could not find out why.
+> That is a result about my edits, not an engine limit: other people ship vehicles with
+> new geometry (RBM-Exporter writes whole new vehicle blocks with counts taken from the
+> Blender mesh, and the Meme Vehicle Pack adds a Shrek plane and a jeep). One hypothesis
+> is that the body's collision, a Havok external mesh bound to the render mesh, expects
+> the original mesh, but I never regenerated physics, and some of my own results argue
+> against it (Gotcha 3). The cause is open.
 >
 > The other half of the story is a mistake worth reading. I concluded the entity property
 > file could not be written at all and closed off a whole route on that basis. It was
@@ -41,13 +44,15 @@ tags: ['vehicles', 'mesh', 'rbm', 'avalanche-engine', 'havok', 'structural-valid
 
 ## Setup
 
-- Windows, hybrid graphics (Intel HD + GTX 1070) — which turned out to matter, see Gotcha 8.
+- Windows, hybrid graphics (Intel HD + GTX 1070) — which turned out to matter, see Gotcha 7.
 - Stock Steam install, no DLC manager, no loader, no anticheat.
+- Single player only; JC3MP is not covered by this note. Dropzone files load in any launch
+  of the game, so empty the dropzone before joining servers you don't run.
 - Gibbed.JustCause3 tools for archives and property files (`SmallUnpack`, `SmallPack`, `ConvertAdf`, `ConvertProperty`, `HashName`).
 - A custom Python RBM codec written from scratch: byte-exact decode/encode for the render
   block types the stock tooling does not cover. This is the load-bearing tool — see Build steps.
-- Two public references, both cloned and read: `aaronkirkham/jc-model-renderer` and
-  `Brooen/RBM-Exporter`.
+- Two public references, both cloned and read: `aaronkirkham/jc-model-renderer` (its
+  `develop` branch; the v0.12.3 release differs, see Gotcha 5) and `Brooen/RBM-Exporter`.
 
 ## Route and why
 
@@ -57,8 +62,8 @@ files inside, repack, and drop the `.ee` into `dropzone/`. Nothing else in the V
 consulted.
 
 The alternative — swapping in another vehicle's model files wholesale — was tried three
-times and hung the game every time. Mesh *provenance* turned out to be irrelevant; what
-mattered was whether the mesh's structure still matched what the entity expects.
+times and hung the game every time. In these tests mesh *provenance* made no difference;
+what mattered was whether the mesh's structure still matched the vanilla entity's.
 
 ## How the game works (what we had to learn)
 
@@ -89,7 +94,15 @@ plain uses position stride `0x0C` and a `0x18` normal/UV buffer; deform uses `0x
 blocks additionally carry a 1 KB table of 256 bone indices — 254 of the 256 entries are
 populated.
 
-**The structural validation wall.** This is the finding that matters, and it is
+CarPaintMM's per-vertex data is split across **parallel buffers, each with its own count
+prefix**: the position buffer, then the normal/UV buffer, then (only when the
+`SUPPORT_LAYERED` `0x20` or `SUPPORT_OVERLAY` `0x40` flag is set) a third UV buffer, and
+then the index buffer. jc-model-renderer v0.12.3's `RenderBlockCarPaintMM::Read` reads them
+in that order, and RBM-Exporter writes all three with the same vertex count. So a vertex
+added to the position buffer has to go into every per-vertex buffer present, with each count
+updated; otherwise the buffers disagree, or the bytes after the short one are misread.
+
+**What loaded and what crashed.** This is the finding that matters, and it is
 empirical:
 
 | change to the entity | result |
@@ -101,23 +114,26 @@ empirical:
 | vertex or index counts changed, plain block | crash |
 | any file removed from the entity, geometry untouched | crash |
 
-The engine checks the entity's structure at load and rejects changes to it with a hard
-crash rather than a degraded vehicle. File set, vertex counts, index counts and block
-count must all survive; only in-place edits of fixed-size fields are safe.
+In these tests every structural change crashed hard rather than giving a degraded vehicle,
+and only in-place edits of fixed-size fields loaded. Read that as a rule for the edits I
+made, not for the engine: published custom vehicles do change vertex and index counts
+(see Gotcha 3). This note doesn't give the faulting module for the crash rows, so a driver
+fault (Gotcha 7) isn't ruled out for any single row.
 
 The `.epe` row is the interesting one, because it shows the rule is not "this tool is
-broken" but "this representation is lossy". The stock property converter round-trips an
-`.epe` only if you repair what its XML cannot carry. Once repaired it is a perfectly good
-`.epe` editor — which is what the community guide says, and which I initially contradicted.
+broken" but "this writer is lossy". The stock property converter round-trips an `.epe`
+only if you repair the padding its writer gets wrong (Gotcha 1). Once repaired it is a
+perfectly good `.epe` editor — which is what the community guide says, and which I
+initially contradicted.
 
 That also means my earlier conclusion that a custom entity was unreachable *because the
-`.epe` could not be written* was wrong. The real blocker for adding geometry is elsewhere
-and is still open; see Open questions.
+`.epe` could not be written* was wrong. Why my count-changing edits crashed is still open;
+see Open questions.
 
-**Why adding geometry is blocked.** The body's collision is a Havok `hknpExternMeshShape`
-inside `<entity>.physicsc` — a Havok 2014.1 serialised binary with `__classnames__`,
-`__types__` and `__data__` sections. Removing that file crashes even with no geometry
-change, so it is genuinely load-bearing.
+**One hypothesis: collision is coupled to the render mesh.** The body's collision is a
+Havok `hknpExternMeshShape` inside `<entity>.physicsc` — a Havok 2014.1 serialised binary
+with `__classnames__`, `__types__` and `__data__` sections. Removing that file crashes
+even with no geometry change, so it is genuinely load-bearing.
 
 I looked everywhere the expected vertex or index count could be stored:
   • the `.epe` contains **no** mesh counts (17 of 18 body block counts absent; random
@@ -136,20 +152,27 @@ bisection:
   • **test-019** – duplicated one vertex of body block 0 (vertex count 1024 → 1025,
     index buffer untouched) → **crash**.
 
-Therefore the engine rejects **any** change to either count, even when the other count
-is held constant and the modified buffer is otherwise well‑formed (byte‑identical
-re‑encode, zero bbox error, no out‑of‑range indices, no degenerate triangles, no
-non‑finite floats).
+So both of my count changes crashed, even with the other count held constant and the
+modified buffer otherwise well-formed (byte-identical re-encode, zero bbox error, no
+out-of-range indices, no degenerate triangles, no non-finite floats). That does not show
+the engine rejects count changes in general; published custom vehicles change counts.
+Two details are missing from this record: which of the block's per-vertex buffers the
+duplicate vertex in test-019 went into (see the layout above), and which module faulted
+in each run (Gotcha 7). Both are in Open questions.
 
-Since no file in the entity stores the expected count, the check must live either in
-the game executable/DLL or in an asset we have not yet inventoried (e.g., an animation
-controller or handling file). Given that the Havok collision shape is an extern mesh
-reference to the render mesh, the most plausible location is inside the Havok loader or
-the engine’s mesh‑to‑Havok conversion path — which would mean the expected count is
-compiled into Havok or into the engine’s call to Havok.
+Candidate causes, none confirmed:
+  • **the edit itself**, e.g. per-vertex buffers left with different counts, or a block
+    type or flag combination that the published tools never write;
+  • **a load-time check tied to collision**: the body's collision shape is an extern mesh
+    reference to the render mesh, so the Havok loader or the engine's mesh-to-Havok path
+    could expect the original mesh. The number-plate crash (Gotcha 3) and test-019
+    (index buffer, and so every triangle, unchanged) are hard to square with this;
+  • **an asset not yet inventoried** (an animation controller, handling or LOD settings);
+  • **the GPU driver** for some of the runs (Gotcha 7).
 
-Without a way to change that expectation, added geometry remains blocked. The only
-workaround is to displace existing vertices, which leaves both counts untouched.
+Until the cause is found, the route that works is displacing existing vertices, which
+leaves both counts untouched. For added geometry, start from how the published custom
+vehicles are built (Open questions).
 
 **Registering a genuinely new vehicle** needs no patch to any DLL. The public console mod
 (`jc3-console-thingy`) hooks the game's property-file reader, lifts one property out of
@@ -215,33 +238,42 @@ Two lessons from this specific sequence:
   each vertex is bit-identical; archive diff confirming one changed file per edit.
 - **In game:** the car spawns, drives, steers and brakes; body panels, glass and lamps all
   move together; wheels and arches provably untouched.
-- **Not verified:** why changed vertex counts crash. I eliminated the two mechanisms I
-  blamed — the `.epe` stores no mesh counts, the `.physicsc` stores no baked mesh or
-  counts — and confirmed the appended files were well-formed on every offline check. So
-  the cause is inside the load-time mesh-to-collision derivation, but I never observed it
-  and cannot name the exact check.
+- **Not verified:** why my count-changing edits crashed. I eliminated the two mechanisms I
+  first blamed — the `.epe` stores no mesh counts, the `.physicsc` stores no baked mesh or
+  counts — and confirmed the appended files were well-formed on every offline check. The
+  load-time mesh-to-collision derivation is one hypothesis, but I never observed it and
+  cannot name a check; since published custom vehicles change counts, the cause may just
+  as well be in how my edits were written (Gotcha 3).
 
   One caveat against over-trusting the pattern: the author of a large, long-lived
   custom-vehicle modpack lists an intermittent vehicle crash in his own known issues as
   "I have no idea what causes it now". Sporadic vehicle crashes therefore may not be
   exclusive to naive edits, and a clean deterministic rule and an intermittent bug should
   not be conflated from three samples.
+- **Not verified:** the faulting module for test-018, test-019 and the crash rows of the
+  table. At least one crash on this machine was in the NVIDIA driver (Gotcha 7), so none of
+  those runs is attributed to the mod or to the driver yet.
+- **Not covered by this note:** JC3MP, and count changes in a block written the way
+  RBM-Exporter writes it.
 
 ## Gotchas
 
 1. **Symptom:** re-encoding an `.epe` through the Gibbed property converter crashes the game
-   instantly, with no other change. **Cause:** the XML representation cannot express the
-   `0x50` **pad/flag bytes that sit immediately after null-terminated strings**, so the
-   writer emits zeros and destroys the container's structure. In a stock vehicle `.epe` this
+   instantly, with no other change. **Cause:** the writer, not the XML. Gibbed's RTPC writer
+   (`PropertyContainerFile.Serialize`) aligns values by moving the stream position, so the
+   **alignment gaps, such as the bytes right after null-terminated strings**, come out as
+   `0x00`, while the game's own files fill them with `0x50`. In a stock vehicle `.epe` this
    is ~2,189 bytes — it is the bulk of the damage, and the first one sits right after the
    root class string, which is why the whole entity dies. **Fix:** the converter *is*
    usable; diff the output against the original and restore every byte where the original
    held `0x50` and the writer wrote `0x00`. That drops the difference from 2,293 bytes to
-   104, and the result loads and drives normally. The residual 104 are last-digit float32
-   rounding plus ~45 bytes where the writer substitutes defaults (`0x00` → `0xFF`/`0xFE`/
-   `0x01`/`0x02`); those are tolerated by the game. My first diagnosis here was wrong — I
-   assumed the lost bytes were `"PPPP"` sentinels and dismissed the remainder as float
-   noise measured at misaligned offsets. Measuring properly showed neither.
+   104, and the result loads and drives normally. (Making the writer fill alignment gaps
+   with `0x50` would remove the need for the repair; this note used the repair.) The
+   residual 104 are last-digit float32 rounding plus ~45 bytes where the writer substitutes
+   defaults (`0x00` → `0xFF`/`0xFE`/`0x01`/`0x02`); those are tolerated by the game. My
+   first diagnosis here was wrong — I assumed the lost bytes were `"PPPP"` sentinels and
+   dismissed the remainder as float noise measured at misaligned offsets. Measuring
+   properly showed neither.
 
 2. **Symptom:** deleting a file from the unpacked tree and repacking yields a 0-byte `.ee`
    and a `FileNotFoundException`. **Cause:** the packer treats a generated `@files.xml` as
@@ -249,17 +281,26 @@ Two lessons from this specific sequence:
    `<file name=...>` line. Same trap in reverse: new files must be registered or they are
    silently dropped.
 
-3. **Symptom:** any edit that changes vertex or index counts crashes — including on a plain
-   non-deform block, and including on a part as trivial as a number plate. **Cause:** the
-   rejection is in the load-time derivation of collision from the render mesh, not in any
-   declaration you could go and update (see How the game works — the `.epe` has no counts
-   and the `.physicsc` has no baked mesh). **Fix:** none available. Reshape by moving
-   existing vertices; added geometry needs collision regenerated by a Havok tool.
+3. **Symptom:** every edit of mine that changed vertex or index counts crashed — including on
+   a plain non-deform block, and including on a part as trivial as a number plate.
+   **Cause:** unknown. It isn't an engine rule: RBM-Exporter writes whole new CarPaintMM,
+   Window and CarLight blocks with counts taken from the Blender mesh, the Meme Vehicle Pack
+   ships a Shrek plane and a jeep, and Gotcha 5's working custom vehicle has 128 blocks.
+   None of those can keep vanilla counts. I also found no stored count to update (the
+   `.epe` has no counts and the `.physicsc` has no baked mesh; see How the game works).
+   Hypotheses, none confirmed: per-vertex buffers left with different counts (the third
+   CarPaintMM buffer is easy to miss), a block type the published tools don't write, a
+   load-time check tied to collision (the number plate and test-019, with every triangle
+   unchanged, argue against that one), or a driver fault (Gotcha 7). **Fix:** none found
+   yet. Reshape by moving existing vertices. To find the cause, diff a working custom
+   vehicle against the vanilla entity it's based on (block types, counts, whether it ships
+   its own `.physicsc`, its `.epe` parts list), then repeat test-018/019 on a plain block
+   written the way RBM-Exporter writes it.
 
 4. **Symptom:** removing `sportsmuscle.physicsc` from an otherwise unmodified vehicle crashes
    it. **Cause:** it is load-bearing, and the body's collision is a Havok
-   `hknpExternMeshShape` pointing at the render mesh. **Fix:** keep it. If you add geometry
-   you must regenerate it, which is the real blocker. Note this file is a Havok 2014.1
+   `hknpExternMeshShape` pointing at the render mesh. **Fix:** keep it. Whether added
+   geometry needs it regenerated is unknown (Gotcha 3). Note this file is a Havok 2014.1
    binary — read its class names straight out of the `__classnames__` section rather than
    guessing at a format.
 
@@ -275,16 +316,20 @@ Two lessons from this specific sequence:
 
 6. **Symptom:** you cannot find the property the console mod spawner reads, no matter how
    many names you hash. **Cause:** that property has **no name** — it is an id-only field,
-   visible in converted output as a value tagged with a raw id rather than a name. **Fix:**
+   visible in converted output as a value tagged with a raw id rather than a name. The id is
+   `0xF71C2A21`, the hash jc3-console-thingy's `src/commands/spawn.h` looks up. **Fix:**
    scan binaries for the little-endian id bytes instead of hashing candidate names. I found
    56 hits in a shipped mod's `settings/spawn_encounter_defs.bin` in one pass.
 
-7. **Symptom:** a crash that looks like your mod's fault but isn't. **Cause:** on hybrid
-   graphics the fault is often in the GPU driver. **Fix:** read the faulting *module* from
-   the OS application log before blaming your build. Here the newest event was in the
-   NVIDIA OpenGL driver, and an empty dropzone (pure vanilla, no mod) launched fine while
-   modded builds "crashed". Do the control experiment — empty the dropzone — before
-   concluding anything about your own changes.
+7. **Symptom:** a crash that looks like your mod's fault but may not be. **Cause:** on hybrid
+   graphics the fault can be in the GPU driver; here the newest application-log event was in
+   the NVIDIA OpenGL driver. **Fix:** read the faulting *module* (and application name) from
+   the OS application log before blaming or clearing your build, and if it's the driver,
+   re-run on the discrete GPU. Do the control experiment too — empty the dropzone — but note
+   what it shows: an empty dropzone launching fine while modded builds crash points at the
+   mod, not the driver. Only the faulting module tells the two apart. This note doesn't give
+   the faulting module for test-018, test-019 or the crash rows of the table, so those runs
+   aren't attributed yet (Open questions).
 
 8. **Symptom:** a round-trip test passes but the file is still lossy. **Cause:** I compared
    the second generation against the first generation of the *same* lossy representation,
@@ -340,25 +385,34 @@ cost — most failures were caught without launching the game at all.
 
 ## Open questions
 
-- **Where does the expected vertex/index count live?** The bisection proved that
-  changing either count crashes, yet no file in the entity stores those numbers.
-  The check must be in the game executable, a DLL, or an asset we have not yet
-  inventoried (e.g., an animation controller, handling file, or LOD settings block).
-  If you can locate and patch that expectation, then added geometry becomes possible
-  by updating the count and providing matching geometry. Without that, the only
-  workaround is to stay within the existing vertex and index budgets.
+- **Why did my count-changing edits crash?** Published custom vehicles change counts, so
+  the engine accepts that in some form, and no file in the entity stores the expected
+  counts. The fastest lead is to diff a working custom vehicle (the Meme Vehicle Pack, or
+  one built with RBM-Exporter) against the vanilla entity it's based on: block types
+  (plain vs deform), vertex and index counts, whether it ships its own `.physicsc`, and
+  its `.epe` parts list. Then repeat test-018/019 on a plain block written the way
+  RBM-Exporter writes it.
 
-- **If the expectation is compiled into the engine/Havok path**, then the only way to
-  author new collision is to use the same toolchain that the original developers used.
-  The strongest remaining lead is **ApexMax**, the 3ds Max plugin for Apex Engine
-  formats, which is documented as working with **HavokMax** to generate an external
-  preset for the Havok plugin. If such a toolchain can be obtained or rebuilt, it
-  would produce a `.physicsc` that the engine accepts, allowing added geometry by
-  regenerating collision from the new render mesh.
+- **Which per-vertex buffers did test-019's duplicate vertex go into?** A CarPaintMM
+  block has two or three count-prefixed per-vertex buffers (positions, normal/UV, and a UV
+  buffer when `SUPPORT_LAYERED` or `SUPPORT_OVERLAY` is set). If the vertex went into the
+  position buffer only, the block is broken on its own terms, whatever else the engine
+  checks. This note doesn't record which buffers were extended.
+
+- **Which module faulted in test-018, test-019 and the crash rows of the table?** If any of
+  them was the NVIDIA driver (Gotcha 7), re-run it on the discrete GPU before drawing
+  conclusions from it.
+
+- **If collision does turn out to need regenerating**, I know of no public tool that writes
+  a `.physicsc`. ApexMax is a weak lead at best: its README calls it an "Apex Engine
+  importer for 3ds Max" (archived 2019). HavokMax is archived too, and HavokLib's supported
+  classes are skeletons and animations, not hknp shapes, so neither looks able to produce
+  one.
 
   (`ApexLib` and `ApexToolset` are both archived and contain no `.epe` or physics
   tooling: archives and textures only, and material/property serialisation.)
 
 - Reference for the custom-vehicle pipeline: *Meme Vehicle Pack*
   (https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack) by Luke JC
-  (https://videogamemods.com/u/lukejc3mp-0021).
+  (https://videogamemods.com/u/lukejc3mp-0021), which ships new models such as a Shrek
+  plane.
