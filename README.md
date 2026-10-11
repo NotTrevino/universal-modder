@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="https://discord.com/invite/sEZWaf7vV"><img alt="community: join us on discord" src="docs/media/badges/discord.png" height="26"></a>
   <a href="#install"><img alt="works with Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot and OpenCode" src="docs/media/badges/agents.png" height="26"></a>
   <a href="knowledge/INDEX.md"><img alt="knowledge base: field notes by agents, for agents" src="docs/media/badges/knowledge.png" height="26"></a>
   <a href="https://fal.ai"><img alt="assets: fal" src="docs/media/badges/fal.png" height="26"></a>
@@ -19,7 +20,11 @@
   <img src="docs/media/mods-teaser.gif" alt="Six mods made by AI coding agents, with the universal-modder tile in the corner: Steve gliding an elytra through Los Santos, the Nether spreading over Los Santos, Minecraft mobs fighting the LSPD, the Halo Warthog in Minecraft, a World at War flamethrower in Minecraft, and World at War zombies in Minecraft. It ends on the universal-modder logo and &quot;mod any game.&quot;" width="560">
 </p>
 
-<p align="center"><b>Coming next: the mod hub.</b> Publish your mods, remix other people's, and make new ones.</p>
+<p align="center"><b>Coming next: the mod hub.</b> Publish your mods, remix other people's, and make new ones.<br>
+  Share what you make, get help, and follow along:</p>
+<p align="center">
+  <a href="https://discord.com/invite/sEZWaf7vV"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/media/discord-dark.svg"><img src="docs/media/discord-light.svg" height="32" alt="join the discord"></picture></a>
+</p>
 
 ## Install
 
@@ -32,7 +37,7 @@ Pick your agent. Each gets the same skills (Agent Skills format), the fal MCP se
 | **Gemini CLI** | `gemini extensions install https://github.com/rehan-remade/universal-modder` |
 | **VS Code / Copilot** | Enable `chat.plugins.enabled`, run **Chat: Install Plugin From Source**, and enter this repo's URL |
 | **Cursor** | Cursor Marketplace, or clone (Cursor reads `AGENTS.md` and `.cursor/mcp.json`) |
-| **OpenCode** | Clone and run `opencode` inside it (`opencode.json` adds the skills and the fal MCP server) |
+| **OpenCode** | Clone and run `opencode` inside it (`opencode.json` adds the skills and the fal MCP server)<br>or, on OpenCode 2, `opencode plugin add 'github:rehan-remade/universal-modder#main::path:plugins/opencode'` (the `um` tool and fal MCP; add the skills with **Skills only**) |
 | **Skills only**<br>(any agent) | `npx skills add https://github.com/rehan-remade/universal-modder` |
 | **Anything else** | `git clone https://github.com/rehan-remade/universal-modder` and start your agent inside it |
 
@@ -41,7 +46,12 @@ Copilot, Cursor, OpenCode) and `.claude/skills` (Claude Code) are copies of `ski
 `AGENTS.md`, which `CLAUDE.md` and `GEMINI.md` point to. MCP config is in `.mcp.json`, `.codex/config.toml`,
 `.cursor/mcp.json`, `.vscode/mcp.json` and `opencode.json` (which also points OpenCode at `skills/`).
 
-**The `um` CLI.** Plugin installs and clones put it on PATH. Anywhere else:
+Without a clone, OpenCode 2 installs the plugin in `plugins/opencode/` with `opencode plugin add`: one
+`um_run` tool that passes its arguments straight to the CLI and runs `um` from PATH (see below), plus the
+fal MCP server when `FAL_KEY` is set and none is configured. A clone doesn't need it. See
+`plugins/opencode/README.md`.
+
+**The `um` CLI.** Plugin installs and clones put it on PATH (OpenCode's plugin install doesn't). Anywhere else:
 ```bash
 uv tool install git+https://github.com/rehan-remade/universal-modder     # or: pipx install git+...
 ```
@@ -182,7 +192,7 @@ Each has a field note with every non-obvious lesson: [knowledge/INDEX.md](knowle
 Full reasoning: [`skills/mod-any-game/references/safety.md`](skills/mod-any-game/references/safety.md).
 
 ## Made a mod with it?
-Put the badge on your mod's page:
+Show it off in the [Discord](https://discord.com/invite/sEZWaf7vV), and put the badge on your mod's page:
 
 <p>
   <a href="https://github.com/rehan-remade/universal-modder"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/media/made-with-dark.svg"><img src="docs/media/made-with-light.svg" height="32" alt="made with universal-modder"></picture></a>
