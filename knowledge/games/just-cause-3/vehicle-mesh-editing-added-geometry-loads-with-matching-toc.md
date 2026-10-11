@@ -424,3 +424,36 @@ dissolved under one re-measurement.
   (https://videogamemods.com/u/lukejc3mp-0021), which ships new models such as a Shrek
   plane — diff every such mod against its vanilla base (file by file, with hashes)
   before treating anything in it as precedent.
+
+## Follow-ups: the old bisection questions, answered from the record
+
+Three questions outlived the original verdict; all three resolve without new launches:
+
+1. **Which per-vertex buffers did test-019's duplicate vertex go into?** Both. The
+   bisect script extends `vb0` *and* `vb1` (one stride appended to each, both counts
+   +1), and block 0's flags (`0x1004`) set no third-buffer bits — so the file carried
+   no disagreeing buffer. A position-only edit would have crashed on its own terms;
+   this one didn't, and its crash is now attributed like the rest (stale `.toc`).
+2. **Which module faulted in test-018/019?** Inside `JustCause3.exe` itself
+   (`+0x1ec3e0` / `+0x1ebb1ec`, access violations read from the minidumps at the
+   time) — distinct from each other, from the repoint fault (`+0x2d49e0`), and from
+   the driver-fault cluster. Not the NVIDIA driver, so no discrete-GPU re-run would
+   have changed anything. Caveat: Windows has since rotated those `.dmp` files out,
+   so this rests on the contemporary reading, and both runs lacked matching `.toc`s —
+   neither can implicate counts either way.
+3. **Diff of a working custom vehicle vs its vanilla base.** The Meme Pack's DaBaby
+   jeep vs the stock oldjeep, file by file:
+
+   | | vanilla base | DaBaby |
+   |---|---|---|
+   | body mesh | 3 CarPaintMM blocks, flags `0x100E` (DEFORM) | 1 block, flags `0x80`, stride 12, 224 verts / 444 tris, car-sized bbox |
+   | `.epe` | full part tree | 122,790 B, 5 parts (body idx 0 + 4 wheels, vanilla names) |
+   | parts file | civilian table | NEW `dababy_vehicle_parts.vmodc` (body + 4×(wheel, modelswap) hash swaps, same size) + repointed civilian copy |
+   | `.physicsc` | 678,576 B extern-mesh structure | untouched (same file in `game36`) |
+   | `.toc` | — | 704 records; every changed/added file at a real offset, shared files at 0 |
+
+   The requested repeat of test-018/019 on an exporter-style plain block *with a
+   correct `.toc`* has not been run — and is arguably moot: a 24,125-vertex single
+   block and a full five-file LOD chain already load toc-correct, which strictly
+   dominates a one-vertex bisection. Offer stands if a reviewer still wants the
+   isolated single-count datapoint; it costs two builds and two launches.
