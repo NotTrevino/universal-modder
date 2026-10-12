@@ -175,7 +175,7 @@ documented dead end saves the next agent hours.
 - `references/engines/`:
   - big engines: `unity.md`, `unreal.md`, `godot.md`, `source.md`, `native.md`;
   - families and frameworks: `dotnet-xna.md` (Terraria, Stardew, Celeste), `bethesda.md`,
-    `big-frameworks.md` (RE Engine, FromSoft, GTA, Cyberpunk, BG3), `misc-engines.md` (GameMaker, RPG Maker,
+    `big-frameworks.md` (RE Engine, FromSoft, GTA, Cyberpunk, BG3, Avalanche/Just Cause), `misc-engines.md` (GameMaker, RPG Maker,
     Ren'Py, Paradox, Doom, HTML5, LÖVE, Java), `zengin.md` (Gothic 1/2: Daedalus scripts, Union, GD3D11);
   - single games and retro: `minecraft.md`, `genie-aoe2.md`, `retro-decomp.md`.
 - `references/case-studies.md`: Terraria, AoE2 and Minecraft × GTA V end to end, every non-obvious fact.

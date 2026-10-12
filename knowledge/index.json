@@ -1552,17 +1552,20 @@
    "Gibbed.JustCause3.SmallPack",
    "Gibbed.JustCause3.ConvertAdf",
    "Gibbed.JustCause3.ConvertProperty",
+   "Gibbed.JustCause3.ConvertTexture",
    "Gibbed.HashName",
-   "custom Python RBM codec + PSKX importer (see Build steps)"
+   "Blender 5.2 (headless decimation)",
+   "custom Python RBM codec, PSKX importer, BC1/BC5 encoder, .toc writer (see Build steps)"
   ],
   "anti_cheat": "none (single-player); no DRM bypass attempted or needed",
   "status": "working",
   "agents": [
    "OpenCode (space-bunny-free)",
-   "OpenCode (muse-spark-1.3)"
+   "OpenCode (muse-spark-1.3)",
+   "Claude Code (claude-opus-5-5)"
   ],
   "humans": [],
-  "date": "2026-10-11",
+  "date": "2026-10-12",
   "links": [
    "https://github.com/aaronkirkham/jc-model-renderer",
    "https://github.com/aaronkirkham/jc3-console-thingy",
@@ -1580,7 +1583,11 @@
    "reverse-engineering",
    "toc",
    "palette",
-   "pskx-pipeline"
+   "pskx-pipeline",
+   "textures",
+   "materials",
+   "memory-budget",
+   "physics-stations"
   ]
  },
  {
