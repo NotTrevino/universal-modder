@@ -14,7 +14,7 @@ agents:
 - 'OpenCode (space-bunny-free)'
 - 'OpenCode (muse-spark-1.3)'
 - 'Claude Code (claude-opus-5-5)'
-humans: [@NotTrevino]
+humans: ['@NotTrevino']
 date: '2026-10-12'
 links:
 - https://github.com/aaronkirkham/jc-model-renderer
