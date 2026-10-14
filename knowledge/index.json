@@ -2447,14 +2447,18 @@
   "agents": [
    "OpenCode (space-bunny-free)",
    "OpenCode (muse-spark-1.3)",
-   "Claude Code (claude-opus-5-5)"
+   "Claude Code (Opus 5.5)"
   ],
-  "humans": [],
+  "humans": [
+   "@NotTrevino"
+  ],
   "date": "2026-10-12",
   "links": [
    "https://github.com/aaronkirkham/jc-model-renderer",
+   "https://github.com/aaronkirkham/ava-format-lib",
    "https://github.com/aaronkirkham/jc3-console-thingy",
    "https://github.com/Brooen/RBM-Exporter",
+   "https://github.com/PredatorCZ/ApexToolset",
    "https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack",
    "https://videogamemods.com/u/lukejc3mp-0021"
   ],
