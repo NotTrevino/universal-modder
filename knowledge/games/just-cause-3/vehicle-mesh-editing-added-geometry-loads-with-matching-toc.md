@@ -13,13 +13,15 @@ status: working
 agents:
 - 'OpenCode (space-bunny-free)'
 - 'OpenCode (muse-spark-1.3)'
-- 'Claude Code (claude-opus-5-5)'
+- 'Claude Code (Opus 5.5)'
 humans: ['@NotTrevino']
 date: '2026-10-12'
 links:
 - https://github.com/aaronkirkham/jc-model-renderer
+- https://github.com/aaronkirkham/ava-format-lib
 - https://github.com/aaronkirkham/jc3-console-thingy
 - https://github.com/Brooen/RBM-Exporter
+- https://github.com/PredatorCZ/ApexToolset
 - https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack
 - https://videogamemods.com/u/lukejc3mp-0021
 tags: ['vehicles', 'mesh', 'rbm', 'avalanche-engine', 'havok', 'gibbed', 'reverse-engineering', 'toc', 'palette', 'pskx-pipeline', 'textures', 'materials', 'memory-budget', 'physics-stations']
@@ -84,7 +86,10 @@ Beside every shipped `.ee` sits a `.toc`: the SARC directory as a flat list of
 a dropzone `.ee` **through** a `.toc`. Change any inner file's size, add or remove a
 file, and the vanilla `.toc`'s offsets point at the wrong bytes — the game reads garbage
 and crashes. Every "structural change crashes" result from the first half of this project
-was this, not engine validation.
+was this, not engine validation. aaronkirkham's
+[ava-format-lib](https://github.com/aaronkirkham/ava-format-lib) reads the same layout
+(`StreamArchive::ParseTOC`, u32 offset and size), patches the SARC's own entries with it,
+and treats an entry at offset 0 as patched, i.e. not stored in this archive.
 
 - **Offset 0 means "read this file from the archives"** (the current patched copy), not
   "unused". A modified file left at offset 0 is silently ignored — this exact trap ate a
@@ -159,9 +164,11 @@ verified to ±0.01 against vanilla geometric normals.
 CarPaintMM's per-vertex data is split across **parallel buffers, each with its own count
 prefix**: the position buffer, then the normal/UV buffer, then (only when the
 `SUPPORT_LAYERED` `0x20` or `SUPPORT_OVERLAY` `0x40` flag is set) a third UV buffer, and
-then the index buffer. A vertex added to the position buffer has to go into every
-per-vertex buffer present, with each count updated; otherwise the buffers disagree, or
-the bytes after the short one are misread.
+then the index buffer. jc-model-renderer v0.12.3's `RenderBlockCarPaintMM::Read` reads them
+in that order, and RBM-Exporter writes all three with the same vertex count. A vertex
+added to the position buffer has to go into every per-vertex buffer present, with each
+count updated; otherwise the buffers disagree, or the bytes after the short one are
+misread.
 
 **What loaded and what crashed — corrected.** The original table below blamed the engine;
 the `.toc` discovery re-attributes every crash row to stale-`.toc` garbage reads. Kept
@@ -174,7 +181,7 @@ here so the correction is checkable:
 | `.epe` re-encoded with the pad bytes restored | **loads and drives** | still true |
 | vertex or index counts changed (any block) | crash | **void**: no matching `.toc` existed yet; toc-correct count changes load |
 | a file removed from the entity, geometry untouched | crash | stale `.toc` (removal shifts every later offset); removal *with* a matching `.toc` is still unproven for load-bearing files |
-| repointing a part at a foreign mesh, `.toc` correct | crash | genuine structural rejection (`READ 0x8 @ +0x2d49e0`); the repoint mechanism itself is proven by the shipped mod |
+| repointing a part at a foreign mesh, `.toc` correct | crash (`READ 0x8 @ +0x2d49e0`) | the repoint read a stale pre-patch file from the `.ee` (Gotcha 13; Verification lists this signature as repoint-at-stale-file); the repoint mechanism itself is proven by the shipped mod |
 
 The bisection that once "proved" count rejection (dropping one triangle, duplicating one
 vertex — both crashed) ran before the `.toc` existed. Both are void as engine evidence.
@@ -203,11 +210,17 @@ the same set sized to fit loaded. Budget from the game's own file: (hard − van
 × 0.9, then shrink textures greedily by bytes per m² of surface they cover, and refuse to
 build if the meshes exceed the model cap.
 
-**Textures.** A `.ddsc` is an Avalanche texture container; `ConvertTexture.exe x.ddsc`
-exports `x.xml` + `x0.dds` (one standard DDS per element), and **`ConvertTexture.exe x.xml`
-imports** (round-trips byte-identically). Vanilla car textures keep only low mips in the
-`.ee` (element 0) and stream the high mips from `.hmddsc` in the archives — and at a vanilla
-path the `.hmddsc` wins, so `.ee`-only edits show only at distance. A texture that works at
+**Textures.** A `.ddsc` is an Avalanche texture container (`AVTX`). The `ConvertTexture.exe`
+used here exported `x.ddsc` to `x.xml` + `x0.dds` (one standard DDS per element), and
+**`ConvertTexture.exe x.xml` imported** it back (round-trips byte-identically). That is
+not the public Gibbed source: its `ConvertTexture` (master, unchanged since 2018) only
+writes element 0 to a `.dds`, and `TextureFile.Serialize` is unimplemented, so which build
+does the import is an open question. PredatorCZ's archived `ApexToolset` (`ddscConvert`)
+converts AVTX and DDS both ways and can write a `.hmddsc` for JC3.
+
+Vanilla car textures keep only low mips in the `.ee` (element 0) and stream the high mips
+from `.hmddsc` in the archives — and at a vanilla path the `.hmddsc` wins, so `.ee`-only
+edits show only at distance. A texture that works at
 a new path with no `.hmddsc` (taken from a shipped mod): `write-to-hmddsc="False"`,
 `mip-count` = `hdr-mip-count` = all mips, **one** element at offset 128 holding the whole
 chain. Formats (from vanilla): colour 71 = BC1, normal 83 = BC5 (DDS `DX10` header +20 B).
@@ -218,7 +231,10 @@ bit `0x1` = has `.hmddsc`. A BC1 encoder in numpy (bounding-box endpoints) is en
 ## Materials: translate the material model, not the textures
 
 The vehicle shader (CarPaintMM) is fully described by its reflection header, and the block
-bytes match it exactly — decode every field **by name** before changing anything:
+bytes match it exactly — decode every field **by name** before changing anything. The
+constant-buffer layouts below match jc-model-renderer v0.12.3's `renderblockcarpaintmm.h`,
+and the flag values match it and RBM-Exporter (which also names `0x8`
+`SUPPORT_PALETTE_FILE`):
 
 - **Per block, static** (`static_params`, 288 B = 18 float4): SpecularGloss, Metallic,
   ClearCoat, Emissive, DiffuseWrap, DirtParams, DirtBlend, DirtColor, DecalCount, DecalWidth,
@@ -241,7 +257,7 @@ bytes match it exactly — decode every field **by name** before changing anythi
   G = plastic, B = chrome.
 
 A source engine with a "separation mask selects material 0–3, each with colour/roughness/
-reflectivity" model (Unreal-era Arkham Knight here) maps onto this almost one to one. Do it
+reflectivity" model (Batman: Arkham Knight, Unreal Engine 3, here) maps onto this almost one to one. Do it
 as a table, not by eye: resolve each source material's named parameters along its parent
 chain, give **every** source factor a disposition (mapped / approximated / no equivalent /
 engine-global / missing on disk) and set **every** CarPaintMM input by a rule with a source
@@ -415,11 +431,14 @@ Two lessons from this specific sequence:
    Deform-data removal with a correct `.toc` still crashed, but that build carried a second
    live variable, so deform's necessity is still open.
 
-5. **Symptom:** planning a pipeline around JC Model Renderer. **Cause:** it implements only
-   three JC3 block types (character, character skin, general MkIII) and **cannot read or
-   write a vehicle RBM at all**. Its release notes about "creating custom models" are about
-   character/AMF meshes. **Fix:** for vehicle authoring look at `Brooen/RBM-Exporter`, which
-   does target JC3 Carpaint/Window/Carlight. Note its own caveat: no deform support — it
+5. **Symptom:** planning a pipeline around JC Model Renderer. **Cause:** the two branches
+   differ. The last release, v0.12.3 (tagged on `master`, Nov 2019), reads, renders and
+   re-writes vehicle blocks (CarPaintMM plain and deform, CarLight, Window, GeneralJC3 and
+   more) and exports OBJ, but its import into those blocks is an empty stub (`SetData` does
+   nothing), so it can't put new geometry into a vehicle. The `develop` rewrite only has
+   three JC3 block types (Character, CharacterSkin, GeneralMkIII). **Fix:** use v0.12.3 to
+   inspect and export vehicle RBMs. For vehicle authoring look at `Brooen/RBM-Exporter`,
+   which targets JC3 Carpaint/Window/Carlight. Note its own caveat: no deform support — it
    writes plain blocks. (A "custom" moped `.ee` found in a modpack looked like evidence that
    plain blocks work in a shipped mod; diffed against the vanilla moped from `game35.tab` it
    is 413/415 files byte-identical, RBMs and `.physicsc` included, and only two textures
@@ -529,7 +548,9 @@ container, 201k points, 300k faces, 19 materials, 180 bones) with UE material du
 `.tga` textures. An earlier version of this note called its unit scale "unknowable" and
 fitted it to the donor's wheelbase; that was wrong — it is real centimetres (tyre Ø1.37 m
 vs a 1.40 m reference), and fitting it to the donor is what forced the physics/visual split
-in Gotcha 15. Import at true scale and move the physics with it.
+in Gotcha 15. Import at true scale and move the physics with it. It is another game's
+extracted asset, so builds that contain it stay private: what can be shared is the
+importer, its specs and the method, not the converted `.ee` or textures.
 
 All geometry, material and texture work is one pass driven by the asset's own data
 (skeleton, weights, material parameters, texture files), plus an offline orthographic
@@ -559,6 +580,9 @@ dissolved under one re-measurement.
   main normal map), anisotropic ramps and colour ramps; emissive needs CarLight blocks.
 - **Channel semantics** of PropertyMap/TintMap are inferred from vanilla data; one in-game
   test with a known two-channel mask would confirm them.
+- **Which `ConvertTexture` build imports `.xml`.** Gibbed's public source can't write a
+  `.ddsc` (see Textures). Naming the build or fork used here, or redoing the import with
+  ApexToolset's `ddscConvert`, would make the texture route reproducible.
 - **Reference for the custom-vehicle pipeline:** *Meme Vehicle Pack*
   (https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack) by Luke JC
   (https://videogamemods.com/u/lukejc3mp-0021), which ships new models such as a Shrek
@@ -592,8 +616,7 @@ Three questions outlived the original verdict; all three resolve without new lau
    | `.physicsc` | 678,576 B extern-mesh structure | untouched (same file in `game36`) |
    | `.toc` | — | 704 records; every changed/added file at a real offset, shared files at 0 |
 
-   The requested repeat of test-018/019 on an exporter-style plain block *with a
-   correct `.toc`* has not been run — and is arguably moot: a 24,125-vertex single
-   block and a full five-file LOD chain already load toc-correct, which strictly
-   dominates a one-vertex bisection. Offer stands if a reviewer still wants the
-   isolated single-count datapoint; it costs two builds and two launches.
+   A repeat of test-018/019 on an exporter-style plain block *with a correct `.toc`*
+   has not been run. It matters less now: a 24,125-vertex single block and a full
+   five-file LOD chain already load toc-correct. The isolated single-count datapoint
+   would cost two builds and two launches.

@@ -116,15 +116,19 @@ kernel anti-cheat: offline single-player only, if at all.
 ## Avalanche engine (Just Cause 3; same archive family: theHunter: Call of the Wild, Just Cause 4, Generation Zero)
 Verified first-hand on Just Cause 3 only: read
 `knowledge/games/just-cause-3/vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md` before touching
-any Avalanche title. The other titles share the archive family per ApexToolset's docs, not by test.
+any Avalanche title. The other titles share the texture and archive family per ApexToolset's docs
+(`github.com/PredatorCZ/ApexToolset`, archived), not by test.
 - **Route: the `dropzone/` folder.** Files at their VFS path under `<game>/dropzone/` override the archives;
   no loader or DLL. An entity (e.g. a vehicle) is one `.ee` archive (AAF-compressed SARC) plus a **`.ee.toc`**
   index beside it.
 - **Tools:** Gibbed.JustCause3 (`Unpack` for `.tab`/`.arc` archives with `-f <regex>`, `SmallUnpack`/
   `SmallPack` for `.ee`, `ConvertAdf` for `.vmodc`/ADF modules, `ConvertProperty` for `.epe`/RTPC,
-  `ConvertTexture` for `.ddsc` (`x.ddsc` exports, `x.xml` imports), `HashName`), Deca (browser), the Gibbed
-  `*.filelist` name lists. `jc3-console-thingy` (an `xinput9_1_0.dll` proxy) spawns entities. JC Model
-  Renderer does not read vehicle models.
+  `ConvertTexture` for `.ddsc`, `HashName`), Deca (browser), the Gibbed `*.filelist` name lists.
+  Gibbed's public `ConvertTexture` only exports (element 0 to `.dds`); ApexToolset's `ddscConvert`
+  converts both ways and writes `.hmddsc`. `jc3-console-thingy` (an `xinput9_1_0.dll` proxy) spawns
+  entities. JC Model Renderer v0.12.3 reads, renders and exports vehicle models but can't import into
+  them (the `develop` rewrite has no vehicle blocks); `Brooen/RBM-Exporter` (Blender) writes plain
+  CarPaint, Window and CarLight blocks.
 - **Rules that cost the most to learn:**
   - Regenerate the `.ee.toc` for any size-changing build; a stale one makes the game read garbage and crash.
     A `.toc` offset of 0 means "take the current copy from the archives", so a modified file left at 0 is
