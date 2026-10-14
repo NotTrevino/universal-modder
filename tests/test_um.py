@@ -437,6 +437,14 @@ def test_mindustry_route(tmp_path, name):
     assert all(rt["route"] != scan.ENGINES["java"][2] for rt in r["routes"])
 
 
+@pytest.mark.parametrize("name", ["The Binding of Isaac Rebirth", "isaac"])
+def test_isaac_route(tmp_path, name):
+    # the Steam folder has no colon, so the Lua route must come from isaac-ng.exe, ahead of the native proxy-DLL one
+    r = _named_game(tmp_path, name, {"isaac-ng.exe": _pe(False), "resources/packed/graphics.a": b"x"})
+    assert r["routes"][0]["route"] == scan.KNOWN["the binding of isaac: rebirth"][0]
+    assert r["routes"][0]["playbook"] == "isaac.md" and r["routes"][0]["why"] == "known game"
+
+
 def test_vdf():
     d = scan._vdf('"AppState" { "appid" "105600" "name" "Terraria" "installdir" "Terraria" }')
     assert d["AppState"]["installdir"] == "Terraria"

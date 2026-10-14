@@ -407,6 +407,9 @@ KNOWN = {
     "portal 2": ("VScript (Squirrel) + Puzzle Maker/Hammer, Workshop", "source.md"),
     "half-life 2": ("Source SDK 2013 mods (C++), maps with Hammer", "source.md"),
     "doom": ("WAD/PK3 mods with a source port (GZDoom/UZDoom)", "misc-engines.md"),
+    "the binding of isaac: rebirth": ("Lua mod in <install>/mods/<name>/ (main.lua, content/*.xml, resources/ overrides), IsaacDocs API; "
+                                      "EnableMods=1 + EnableDebugConsole=1 in options.ini; vanilla assets via tools/ResourceExtractor",
+                                      "isaac.md"),
     "minecraft": ("Fabric (Mixin) or NeoForge", "minecraft.md"),
 }
 
@@ -414,6 +417,7 @@ KNOWN = {
 KNOWN_FILES = [
     ("dwarf fortress", ("data/vanilla/*/info.txt", "dwarf fortress.exe", "dwarfort")),
     ("mindustry", ("mindustry.exe", "mindustry.json", "mindustry.jar", "mindustry.app/contents/resources/desktop.jar")),
+    ("the binding of isaac: rebirth", ("isaac-ng.exe",)),
 ]
 
 # save/profile folders that don't follow the game's name ({profile}, {documents}, {appdata}, {localappdata})
