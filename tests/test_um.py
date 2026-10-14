@@ -793,6 +793,22 @@ def test_compile_small_edl(tmp_path):
 
 
 @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
+def test_compile_preview_keeps_size_even(tmp_path):
+    # 4:5 portrait: half of 1080x1350 is 540x675, and libx264 refuses an odd height in yuv420p
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=1080x1350:d=2:r=30", "-f", "lavfi", "-i", "sine=f=440:d=2",
+                    "-shortest", str(tmp_path / "c.mp4")], check=True)
+    edl = {"size": [1080, 1350], "fps": 30, "segments": [{"clip": "c.mp4", "dur": 1.0}, {"card": {"title": "The end"}, "dur": 1.0}]}
+    (tmp_path / "edl.json").write_text(json.dumps(edl))
+    video.compile_edl(tmp_path / "edl.json", str(tmp_path / "out.mp4"), preview=True)
+    info = video.probe(tmp_path / "out.mp4")
+    assert (info["width"], info["height"]) == (540, 674)
+
+    (tmp_path / "edl.json").write_text(json.dumps(dict(edl, size=[1080, 1351])))
+    with pytest.raises(SystemExit):
+        video.compile_edl(tmp_path / "edl.json", str(tmp_path / "odd.mp4"))
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
 def test_compile_cut_then_fade(tmp_path, monkeypatch):
     # a cut then a fade: xfade's first input is concat's output (AVTB), so every join input must end at AVTB.
     # FFmpeg 7.0/7.1's setpts marks the frame rate unknown (1/0), which xfade refuses, so each join input also

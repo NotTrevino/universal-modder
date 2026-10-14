@@ -5112,6 +5112,301 @@
   ]
  },
  {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-missions-scenarios-faction-swaps-and-esd-spawning.md",
+  "kind": "game",
+  "title": "Space Marine 2 missions: scenario faction swaps, level files, the ESD spawn director and rebaking a navmesh with spawn points",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026); faction swap on Patch 14.x (Sep 2026). Mod Tools app 3856330 build 25506153 (AIConverter, Furnace, MapBuilder)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModEditor, AIConverterExe, furnace.exe, ModelConverter --map_mode)",
+   "Python 3 (struct, zipfile)",
+   "own cd_list / class_list readers-writers (ports of Saber's shipped C# source)",
+   "own ctypes debugger for Saber's offline tools",
+   "own sslbin disassembler"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only. The debugger was only ever attached to Saber's offline converters, never the game.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-13",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "scenario",
+   "mission",
+   "faction-swap",
+   "tyranids",
+   "chaos",
+   "esd",
+   "spawn-director",
+   "navmesh",
+   "aiconverter",
+   "furnace",
+   "cd-list",
+   "class-list",
+   "level",
+   "lobby"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-modding-foundations-paks-tools-and-crash-triage.md",
+  "kind": "game",
+  "title": "Space Marine 2 modding foundations: paks, load order, Saber's tools, manifests and crash triage",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026); earlier findings on Patch 14.x (Aug-Sep 2026). Mod Tools app 3856330 build 25506153 (Oct 2026 update)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModEditor, ModelConverter, UsfExporter, Meta Desc Patcher)",
+   "Python 3 (zipfile, struct)",
+   "own minidump / .ssldmp readers"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-13",
+  "links": [
+   "https://spacemarine2-modding.prismray.io/"
+  ],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "swarm-engine",
+   "pak",
+   "load-order",
+   "ssl",
+   "sso",
+   "crash-triage",
+   "mod-tools"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-models-tpl-format-modelconverter-and-textures.md",
+  "kind": "game",
+  "title": "Space Marine 2 models and textures: the .tpl format, Saber's converter round trip, the shader cache and custom meshes",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026); most findings on Patch 14.x (Aug-Oct 2026). Mod Tools app 3856330 build 25506153 (ModelConverter v13/v14, UsfExporter, TextureConverter)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter, UsfExporter convert_tpl.py, TextureConverter)",
+   "Python 3 (numpy, scipy, struct)",
+   "pymeshlab (Python 3.12)",
+   "xatlas",
+   "texture2ddecoder",
+   "Blender (previews only)"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-13",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "swarm-engine",
+   "tpl",
+   "gltf",
+   "modelconverter",
+   "usfexport",
+   "shader-cache",
+   "textures",
+   "pct",
+   "constructor",
+   "armour",
+   "custom-head",
+   "ai-mesh",
+   "collision",
+   "cloth"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-new-enemies-npc-classes-and-morpheme-animation.md",
+  "kind": "game",
+  "title": "Space Marine 2 new enemies: NPC classes, cloned Morpheme networks, .sani clips, retargeting and executions",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026); most findings on Patch 14.x (Sep-Oct 2026). Mod Tools app 3856330 build 25506153",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModEditor, ModelConverter, UsfExporter)",
+   "Python 3 (numpy, scipy, struct, zlib crc32)",
+   "own .sani reader/writer",
+   "own Morpheme .nmb asset/string-table patcher",
+   "Blender + three.js viewer (previews)",
+   "pymeshlab"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-13",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "npc",
+   "enemy",
+   "boss",
+   "tyranid",
+   "morpheme",
+   "nmb",
+   "sani",
+   "animation",
+   "retarget",
+   "finisher",
+   "execution",
+   "interplay",
+   "xseq",
+   "spawning"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-new-playable-class-on-character-mod-slot.md",
+  "kind": "game",
+  "title": "A new playable class in Space Marine 2 on Saber's CHARACTER_MOD slot (a Chaplain)",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026); class first built on Patch 14.x (Sep 2026) and rebased onto Patch 15",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModEditor, ModelConverter, UsfExporter)",
+   "Python 3 (zipfile, own SSL text parser for 3-way merges)"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-14",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "new-class",
+   "character-mod",
+   "chaplain",
+   "mastery",
+   "perks",
+   "armoury",
+   "talker",
+   "constructor"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-voices-talkers-and-wwise-audio.md",
+  "kind": "game",
+  "title": "Space Marine 2 voices: custom talkers, mission voice routes, media bundles, Wwise bank edits and grunt matching",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026); earlier findings on Patch 14.x (Sep-Oct 2026). Wwise 2019.2 for encoding",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Wwise 2019.2 (WwiseConsole, conversion matching the game's mono voice preset)",
+   "wwiser (bank dumps)",
+   "ww2ogg + revorb (extraction)",
+   "ffmpeg",
+   "Python 3 (struct, numpy; own bank and bundle writers)",
+   "AI text-to-speech (ElevenLabs) for new lines"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-13",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "voice",
+   "vo",
+   "talker",
+   "wwise",
+   "bnk",
+   "wem",
+   "media-bundle",
+   "subtitles",
+   "grunts",
+   "audio",
+   "chatter"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-weapons-skins-reloads-perks-vfx-and-sounds.md",
+  "kind": "game",
+  "title": "Space Marine 2 weapons: skins, new melee weapons, reload and hip-fire animations, perks, VFX, sounds and crosshairs",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026); earlier findings on Patch 14.x (Aug-Oct 2026). Mod Tools app 3856330 build 25506153",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModEditor, ModelConverter, UsfExporter)",
+   "Python 3 (zipfile, struct, numpy)",
+   "own Morpheme .nmb network reader/patcher",
+   "own .sani clip codec",
+   "own sslbin disassembler",
+   "own Wwise bank reader/writer"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-13",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "weapons",
+   "weapon-skin",
+   "melee",
+   "firearm",
+   "reload",
+   "active-reload",
+   "morpheme",
+   "animation-network",
+   "perks",
+   "damage",
+   "burning",
+   "vfx",
+   "sound",
+   "crosshair",
+   "hud",
+   "equipment"
+  ]
+ },
+ {
   "path": "games/watch-dogs/editing-feu-gfx-ui-and-entitylibrary-fcb.md",
   "kind": "game",
   "title": "Watch Dogs 1: editing .feu/.gfx UI components and rebuilding entitylibrary_rt.fcb",
