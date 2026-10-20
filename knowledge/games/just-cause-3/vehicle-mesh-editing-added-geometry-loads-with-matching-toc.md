@@ -593,6 +593,9 @@ dissolved under one re-measurement.
   main normal map), anisotropic ramps and colour ramps; emissive needs CarLight blocks.
 - **Channel semantics** of PropertyMap/TintMap are inferred from vanilla data; one in-game
   test with a known two-channel mask would confirm them.
+- **Which `ConvertTexture` build imports `.xml`.** Gibbed's public source can't write a
+  `.ddsc` (see Textures). Naming the build or fork used here, or redoing the import with
+  ApexToolset's `ddscConvert`, would make the texture route reproducible.
 - **Reference for the custom-vehicle pipeline:** *Meme Vehicle Pack*
   (https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack) by Luke JC
   (https://videogamemods.com/u/lukejc3mp-0021), which ships new models such as a Shrek
