@@ -212,11 +212,22 @@ build if the meshes exceed the model cap.
 
 **Textures.** A `.ddsc` is an Avalanche texture container (`AVTX`). The `ConvertTexture.exe`
 used here exported `x.ddsc` to `x.xml` + `x0.dds` (one standard DDS per element), and
-**`ConvertTexture.exe x.xml` imported** it back (round-trips byte-identically). That is
-not the public Gibbed source: its `ConvertTexture` (master, unchanged since 2018) only
-writes element 0 to a `.dds`, and `TextureFile.Serialize` is unimplemented, so which build
-does the import is an open question. PredatorCZ's archived `ApexToolset` (`ddscConvert`)
-converts AVTX and DDS both ways and can write a `.hmddsc` for JC3.
+**`ConvertTexture.exe x.xml` imported** it back (round-trips byte-identically). It is not
+public Gibbed master — master's `ConvertTexture` (unchanged since 2018) only writes
+element 0 to a `.dds`, and its `TextureFile.Serialize` throws `NotImplementedException`.
+The build that imports is **`tim42/gibbed-justcause3-tools-fork`**, a fork of Gibbed's JC3
+tools "as of revision 13" (changes by Timothée Feuillet) whose README lists "A texture
+serializer and deserializer that supports both `.ddsc` files and their `.hmddsc`
+counterparts"; binaries are published at
+`justcause3mods.com/mods/modified-gibbeds-tools/`. The binary used is
+`Gibbed.JustCause3.ConvertTexture.exe`, 14,336 B, assembly version 1.0.0.0, SHA-256
+`2A5A7A5915016A5B4C733E2F7005F464EA6674069A24BC7AE0FE86EF58065600`. Import is
+name-driven: it reads `<output-base>0.dds`, so the XML and the element DDS must share a
+base (`ConvertTexture.exe x.xml` with `x0.dds` beside it); passing a different output name
+fails with `FileNotFoundException` on `<name>0.dds`. The fork still writes only element 0,
+and `write-to-hmddsc="True"` import throws, so high mips stay blocked here. PredatorCZ's
+archived `ApexToolset` (`ddscConvert`) converts AVTX and DDS both ways and can write a
+`.hmddsc` for JC3.
 
 Vanilla car textures keep only low mips in the `.ee` (element 0) and stream the high mips
 from `.hmddsc` in the archives — and at a vanilla path the `.hmddsc` wins, so `.ee`-only
@@ -548,9 +559,11 @@ container, 201k points, 300k faces, 19 materials, 180 bones) with UE material du
 `.tga` textures. An earlier version of this note called its unit scale "unknowable" and
 fitted it to the donor's wheelbase; that was wrong — it is real centimetres (tyre Ø1.37 m
 vs a 1.40 m reference), and fitting it to the donor is what forced the physics/visual split
-in Gotcha 15. Import at true scale and move the physics with it. It is another game's
-extracted asset, so builds that contain it stay private: what can be shared is the
-importer, its specs and the method, not the converted `.ee` or textures.
+in Gotcha 15. Import at true scale and move the physics with it. It was exported with
+`umodel` from the author's own installed copy of Batman: Arkham Knight
+(`BmGame/CookedPCConsole/Playable_Batmobile_SF.upk`, Ver 863/227, Game 800016). It is
+another game's extracted asset, so builds that contain it stay private: what can be shared
+is the importer, its specs and the method, not the converted `.ee` or textures.
 
 All geometry, material and texture work is one pass driven by the asset's own data
 (skeleton, weights, material parameters, texture files), plus an offline orthographic
@@ -580,9 +593,6 @@ dissolved under one re-measurement.
   main normal map), anisotropic ramps and colour ramps; emissive needs CarLight blocks.
 - **Channel semantics** of PropertyMap/TintMap are inferred from vanilla data; one in-game
   test with a known two-channel mask would confirm them.
-- **Which `ConvertTexture` build imports `.xml`.** Gibbed's public source can't write a
-  `.ddsc` (see Textures). Naming the build or fork used here, or redoing the import with
-  ApexToolset's `ddscConvert`, would make the texture route reproducible.
 - **Reference for the custom-vehicle pipeline:** *Meme Vehicle Pack*
   (https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack) by Luke JC
   (https://videogamemods.com/u/lukejc3mp-0021), which ships new models such as a Shrek
