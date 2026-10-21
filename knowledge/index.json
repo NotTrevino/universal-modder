@@ -3365,8 +3365,9 @@
    "Gibbed.JustCause3.SmallPack",
    "Gibbed.JustCause3.ConvertAdf",
    "Gibbed.JustCause3.ConvertProperty",
-   "Gibbed.JustCause3.ConvertTexture",
+   "Gibbed.JustCause3.ConvertTexture (tim42 fork)",
    "Gibbed.HashName",
+   "UE Viewer (umodel)",
    "Blender 5.2 (headless decimation)",
    "custom Python RBM codec, PSKX importer, BC1/BC5 encoder, .toc writer (see Build steps)"
   ],
@@ -3375,7 +3376,8 @@
   "agents": [
    "OpenCode (space-bunny-free)",
    "OpenCode (muse-spark-1.3)",
-   "Claude Code (Opus 5.5)"
+   "Claude Code (Opus 5.5)",
+   "OpenCode (deepseek-v4.1-flash-free)"
   ],
   "humans": [
    "@NotTrevino"
@@ -3387,6 +3389,7 @@
    "https://github.com/aaronkirkham/jc3-console-thingy",
    "https://github.com/Brooen/RBM-Exporter",
    "https://github.com/PredatorCZ/ApexToolset",
+   "https://github.com/tim42/gibbed-justcause3-tools-fork",
    "https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack",
    "https://videogamemods.com/u/lukejc3mp-0021"
   ],
