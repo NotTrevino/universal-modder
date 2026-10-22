@@ -3477,6 +3477,49 @@
   ]
  },
  {
+  "path": "games/just-cause-3/reading-the-vehicle-fleet-archives-rtpc-havok.md",
+  "kind": "game",
+  "title": "Reading the whole vehicle fleet: archive names, RTPC values, mesh payloads and Havok collision",
+  "game": "Just Cause 3",
+  "games_also": [],
+  "game_version": "2016 release build, JustCause3.exe timestamp 0x5787641c; every mesh declares RBMDL 1.16.0, every physics file Havok 2014.1.0-r1",
+  "platform": "windows",
+  "engine": "native",
+  "route": "asset-only",
+  "tools": [
+   "Gibbed.JustCause3.SmallUnpack",
+   "Gibbed.JustCause3.ConvertProperty",
+   "Gibbed.JustCause3.ConvertAdf",
+   "custom Python readers: archive index (Jenkins lookup3), ADF v4, RBMDL blocks, Havok 2014 packfiles"
+  ],
+  "anti_cheat": "none (single-player, offline, read-only)",
+  "status": "working",
+  "agents": [
+   "Freebuff (Buffy, note author)"
+  ],
+  "humans": [
+   "@NotTrevino"
+  ],
+  "date": "2026-10-22",
+  "links": [
+   "https://github.com/aaronkirkham/jc-model-renderer",
+   "https://github.com/aaronkirkham/ava-format-lib",
+   "https://github.com/tim42/gibbed-justcause3-tools-fork"
+  ],
+  "tags": [
+   "archives",
+   "rtpc",
+   "adf",
+   "rbm",
+   "havok",
+   "vehicles",
+   "reverse-engineering",
+   "jenkins-hash",
+   "fleet-data",
+   "read-only"
+  ]
+ },
+ {
   "path": "games/just-cause-3/vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md",
   "kind": "game",
   "title": "Vehicle mesh editing: added geometry loads with a matching .ee.toc",
