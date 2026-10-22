@@ -1,13 +1,13 @@
 ---
 kind: game
-title: 'Scraping the Batmobile: umodel PSKX, property dumps and Wwise banks'
+title: 'Scraping the Batmobile: umodel PSKX, native class offsets and Wwise banks'
 game: 'Batman: Arkham Knight'
 games_also: ['Just Cause 3']
 game_version: 'GOG Premium Edition, version.txt 1.999, buildId 57731640734362250, Season Pass + all DLC; cooked packages report UE3 Ver 863/227, Engine 10246, Game 800016'
 platform: windows
 engine: unreal
 route: asset-only
-tools: ['UE Viewer (umodel)', 'vgmstream-cli', 'custom Python UE3 package, WWAD and AkBank parsers', 'Blender 5.2']
+tools: ['UE Viewer (umodel)', 'vgmstream-cli', 'custom Python UE3 package, WWAD and AkBank parsers', 'BmSDK-AK generated class bindings (class dump)', 'Blender 5.2']
 anti_cheat: 'none — single-player, offline extraction from the user''s own install'
 status: working
 agents:
@@ -17,22 +17,26 @@ agents:
 - 'OpenCode (deepseek-v4.1-flash-free)'
 - 'Freebuff (Buffy, note author)'
 humans: ['@NotTrevino']
-date: '2026-10-21'
+date: '2026-10-22'
 links:
 - https://github.com/gildor2/UEViewer
 - https://github.com/vgmstream/vgmstream
-tags: ['umodel', 'pskx', 'ue3', 'cooked-packages', 'wwise', 'bank-extraction', 'materials', 'textures', 'batmobile', 'negative-result']
+- https://github.com/Team-BmSDK/BmSDK-AK
+tags: ['umodel', 'pskx', 'ue3', 'cooked-packages', 'wwise', 'bank-extraction', 'materials', 'textures', 'batmobile', 'native-classes', 'property-offsets', 'class-dump']
 ---
 
-# Scraping the Batmobile: umodel PSKX, property dumps and Wwise banks
+# Scraping the Batmobile: umodel PSKX, native class offsets and Wwise banks
 
 > Extracting Batman: Arkham Knight's Batmobile is solved: umodel opens
 > `Playable_Batmobile_SF.upk`, and its export gives a 299,837-triangle skeletal mesh, 25 material
 > assets with full property dumps, and 56 textures. The engine audio is a second job — the WWAD
 > containers and the embedded Wwise banks need your own parsers, but the event→media graph resolves
-> completely. The handling numbers are the part that is **not** obtainable, and this note shows why
-> rather than guessing at them. Everything here was done for a Just Cause 3 vehicle port, but the
-> extraction lessons are game-side, not destination-side.
+> completely. The handling numbers were the wall: the cooked property tags carry values but no
+> names, and three attempts to read the native class layout from the shipped files each failed for a
+> different reason. A generated scripting SDK broke it — **414 of the Batmobile's 422 named fields
+> now resolve by class plus absolute offset**, and the eight that don't are one nested screen-shake
+> bool block. Everything here was done for a Just Cause 3 vehicle port, but the extraction lessons
+> are game-side, not destination-side.
 
 ## Setup
 
@@ -67,11 +71,13 @@ Three routes exist for "get the Batmobile out of Arkham Knight":
 2. **Write a UE3 package reader first** and skip umodel. This is what the *audio* needed (no general
    tool exposes Wwise banks usefully), but it is unnecessary for meshes and materials. umodel already
    had the package format cracked for this engine build.
-3. **Read the game's tuning values out of native class defaults.** Attempted and failed; see
-   "What is not obtainable". This route is the reason the note exists in this shape.
+3. **Read the game's tuning values out of native class defaults.** Attempted three ways from the
+   shipped files and closed each time, then reopened by a class dump generated from the running game
+   (see "The negative result, and how it fell"). This is the route that names the handling values.
 
-The split matters: **umodel solves geometry, materials and textures; your own parsers solve audio.**
-Any plan that assumes one tool covers all three spends a day discovering otherwise.
+The split matters: **umodel solves geometry, materials and textures; your own parsers solve audio;
+and the native numbers need a class layout the install does not ship.** Any plan that assumes one
+source covers all three spends a day discovering otherwise.
 
 ## How the game works (what we had to learn)
 
@@ -209,6 +215,58 @@ decompressed image is `file[0:NameOffset] + decompressed stream`.
 A zlib-only reader appears to work — until it hits a city pack and fails on the first block. Port
 LZO1X rather than concluding the file is corrupt; it is roughly a page of code and needs no install.
 
+### The native class layout, from a generated SDK
+
+The tuning lives in two untagged native streams (`RVehicleBatmobile` 3,905 B,
+`RVehicleSimBatmobile` 2,328 B): a run of `[u16 type][u16 offset][payload]` rows whose offset is
+relative to the object the row belongs to. The **values** are all there; the **names** are not, and
+neither is the layout that would let you read a row's slot kind. What finally supplied both is
+**BmSDK-AK** (`Team-BmSDK/BmSDK-AK`, MIT), a scripting platform whose build step reflects over the
+**running game** and emits C# with one absolute offset per property:
+
+```csharp
+/// FloatProperty: AirControlYawTorqueFactorMax
+public unsafe float AirControlYawTorqueFactorMax => *(float*)(Ptr + 1192);   // 0x4A8
+```
+
+Structs come out with `[StructLayout(LayoutKind.Explicit, Size = 112)]` and an offset per member.
+`Ptr + 1192` is `0x4A8`, exactly the number space of the cooked tag, so a field resolves by
+**class + absolute offset + slot kind** with no base to guess. 34 classes of the Batmobile's chain
+(2,351 properties, 42 structs) were vendored from that public dump, with its MIT notice; nothing
+from the game's own files is copied.
+
+Why it is the same build, measured: `RVehicleSimBatmobile`'s dump size is 1,220, and the upk walk
+lands on `0x104 + 0x3C0 = 0x4C4` = 1,220 with all 165 declared rows on the matching offset (147 by
+name, the rest bools sharing one bitfield word). `RVehicleSimCar` 456 B, 37/37 names;
+`RBatmobileMissileLauncher` 30/30; `RBatmobileEMPMissile` 36/36; `RBatmobileAllegianceSwitcher`
+21/21; `RBatmobileBooster` 2/2; `RBatmobileMissile` 23/23. The native code anchors agree:
+`SetDriveMode` writes the byte at `0x3B0` and `SkidToStop` at `0x3B1`, which is where the dump puts
+`DriveMode` and `SkidToStopDir`. For the 195 object fields carrying a referent, the declared type
+matches the class the reference points at every time (13 look like misses and are subclasses).
+
+**Layout rules, all measured rather than fitted:**
+
+- `UProperty::ArrayDim` sits at byte 6 of the property export. A static array is **one** property
+  with N slots, not N properties — `GearRatios[6]`, `BoostCooldown[3]`, `VehicleWeapons[10]`.
+- Every type aligns to **4** in this build, pointer slots included.
+- `FInterpCurve<T>` is a **20-byte** slot (16-byte `TArray` + 4-byte-rounded mode), whatever `T` is.
+- `ComponentProperty`, `InterfaceProperty` and `DelegateProperty` are real property classes and take
+  real slots. Dropping them shifts everything after them by 8 or 16 bytes.
+
+That last rule is what the earlier walk got wrong, and it is why the names had looked unrecoverable.
+The `AirControl*` run sat one slot early, so the 8,000 float that read as `AirControlTimeInAir` is
+really `AirControlYawTorqueFactorMax`; `AirControlTimeInAir` is at `0x4BC` and the class ends at
+`0x4C4`. `0x318` is `RInventoryGadget.Mesh`, not `XrayMaskMaterial`; `0x1334` is
+`VehicleWeapons[0]` (referent `Weapons.Batmobile_Cannon_V2`); `0x2AC` is `DriftingBoostCooldown`;
+and `VehicleTransmission` is 112 bytes, not 92.
+
+**Residue.** 8 of the 422 fields stay unnamed: the nested screen-shake bools, where the flattened
+offset is ambiguous between `BMScreenShakeStruct` and its `AdvancedOptions` child. They are recorded
+by offset and not guessed. Separately, seven classes (`RBatmobileCannon`, `RBatmobileHeavyCannon`,
+`RBatmobileSonar`, `RBatmobileWinch`, `RVehicle`, `RVehicleBatmobileBase`, `RInventoryGadget`)
+cannot be regenerated from the *shipped* declaration — that copy is a different build. That does not
+affect the names, which come from absolute offsets in the dump.
+
 ## Build steps
 
 1. **Point umodel at the install** (`E:\Games\Batman - Arkham Knight`). It scans the tree and
@@ -225,6 +283,9 @@ LZO1X rather than concluding the file is corrupt; it is roughly a page of code a
 6. **For audio**, extract WEMs from WWAD by hash and decode with vgmstream. For banks, dechunk the
    package, dump its name table and export table, carve the `AkBank` export, then walk HIRC. Calibrate
    the event-name hash on a serial whose name you already know before trusting any lookup.
+7. **For the native values**, index a class dump of the running build by class + offset, then resolve
+   each cooked tag row against it, walking superclasses. Prove the index on a class you can also
+   re-derive from the shipped declaration (`RVehicleSimBatmobile`, 1,220 B) before trusting a name.
 
 ## Verification
 
@@ -241,10 +302,16 @@ What was measured, and how:
 - **Audio** — byte-exact WWAD extraction on an 8 MB entry; bank carving verified on 10 packages;
   `BML_Engine` resolves all **17/17** events to media; the user identified the engine loops by ear.
 - **Textures** — 56 textures exported and cross-checked against material bindings, not just counted.
+- **Native field names** — 414 of 422 cooked fields resolve; the class-size arithmetic lands on
+  exactly 1,220 B for `RVehicleSimBatmobile` with all 165 declared rows on their dump offset, and
+  37/37 on `RVehicleSimCar`. Native write offsets agree (`0x3B0` `DriveMode`, `0x3B1`
+  `SkidToStopDir`) and all 195 object referents match their declared classes.
 
 What is **not** verified, and must not be claimed:
 
-- Any Arkham Knight handling, mass, damage or armour **number**. See below.
+- That any named handling, mass, damage or armour **value** behaves as its name in the destination
+  game — the names are measured, the in-game behaviour is the port's still-open job.
+- The eight undecidable screen-shake bools (see below); they are recorded by offset only.
 - That the `BML_Battlemode` bank exists in a form reachable from shipped files at all.
 - That other Arkham Knight vehicles export as cleanly. Only the Batmobile package was worked.
 
@@ -293,21 +360,25 @@ What is **not** verified, and must not be claimed:
     nonsense.** **Cause:** GPCD does carry 40,380 property records across 3,431 classes with
     fully-qualified names and types — but its trailing `u32` per record is neither a unique offset nor
     an offset at all (`SVehicle.Wheels` and `SVehicle.bUpdateWheelShapes` share one value), and floats
-    read there are denormal garbage (`1.5e-36`). **Fix:** use GPCD for **names and types only**. It
-    cannot give you values or a memory layout.
+    read there are denormal garbage (`1.5e-36`). **Fix:** use GPCD for **names and types only** and
+    take offsets from a class dump of the running build (native-class section above). GPCD is also the
+    *editor's* schema for a different build, so it never had this game's layout to give.
 12. **You find the Batmobile's native tuning blobs and every value is anonymous.** **Cause:**
     `RVehicleBatmobile` (export 5280, 3,905 B) and `RVehicleSimBatmobile` (export 5281, 2,328 B) are
     untagged native CDO streams of repeated `[u16 type][u16 offset][payload]` entries. Type 4 is a
     float at an object offset, type 13 an `FString`, and offsets restart inside each nested struct.
     The blobs contain **zero** property-name strings — a full printable-run scan of the Sim blob finds
-    none. **Fix:** treat values as unattributable. A magnitude that "looks like mass" is not mass.
+    none. **Fix:** values are unattributable *from the file*, but not unattributable in principle:
+    resolve `(class, offset, type)` against the dump. A magnitude that looks like mass is still not
+    mass until that lookup names it.
 13. **umodel warns `Unknown class "RVehicleSimBatmobile"` and you assume the package failed.** **Cause:**
     umodel loaded the package fine; it simply has no layout for the game's native vehicle classes.
-    **Fix:** read the warning as a boundary: mesh, materials and textures are available; native class
-    properties are not. The cooked script packages that would name them are fully compressed.
+    **Fix:** read the warning as a boundary for *umodel*, not for the file: mesh, materials and
+    textures come out; the layout has to be obtained elsewhere (a class dump, above). Concluding "the
+    package is closed" from it is what cost this project its first three attempts.
 14. **You look for handling values in the ini files.** **Cause:** `BmGame.ini`, `DefaultGame.ini` and
-    `PCGame.ini` hold keybinds (`pGlideSteer` and friends), not vehicle tuning. **Fix:** stop. The
-    values are native class defaults, and gotcha 12 is why they are unreadable here.
+    `PCGame.ini` hold keybinds (`pGlideSteer` and friends), not vehicle tuning.    **Fix:** stop. The values are native class defaults, and gotcha 12 is why the file alone does not
+    name them.
 15. **Your texture folder contains assets the Batmobile never uses.** **Cause:** an umodel package
     export pulls in referenced textures, including shared or unrelated ones (`AceBridgeStatue_Detail`
     was in this set). **Fix:** drive texture selection from material bindings, never from a folder
@@ -317,6 +388,33 @@ What is **not** verified, and must not be claimed:
     roughness, metalness, microdetail and per-material base colour. **Fix:** inventory the parameter
     interface first and translate it input by input, tagging each value's source. Texture-only
     conversion cannot reproduce a material.
+17. **A whole run of fields reads one slot early, and a 8,000 value lands where a time should be.**
+    **Cause:** the layout walker had no slot for `ComponentProperty`, `InterfaceProperty` or
+    `DelegateProperty`, so it dropped 8 or 16 bytes each and every later field slid forward. That is
+    what put `AirControlYawTorqueFactorMax` under the name `AirControlTimeInAir`; the true
+    `AirControlTimeInAir` is at `0x4BC`, and the class ends at `0x4C4`. **Fix:** lay out **every**
+    property class the engine defines, then re-derive the whole class size and compare it with a known
+    total (here 1,220 B for `RVehicleSimBatmobile`) before reading a single value.
+18. **Your static arrays look like one float, and everything after them is shifted.** **Cause:** a
+    static array is one property with N slots, not N properties; the count is `UProperty::ArrayDim` at
+    byte 6 of the property export, which the walker was ignoring. `BoostCooldown[3]`,
+    `GearRatios[6]` and `VehicleWeapons[10]` are the three in this package; counting `BoostCooldown` as
+    a float is what renamed `DriftingBoostCooldown` at `0x2AC`. **Fix:** read `ArrayDim` and reserve
+    `N × slot size` bytes for the property.
+19. **Scalars line up but pointers and curves do not.** **Cause:** two alignment assumptions. Every
+    type in this build aligns to **4**, pointer slots included; and `FInterpCurve<T>` is a **20-byte**
+    slot (16-byte `TArray` + a 4-byte-rounded mode) whatever the point type. Assuming 8-byte pointer
+    slots or a 16-byte curve misplaces fields without changing the total enough to notice. **Fix:**
+    align 4, and treat every `FInterpCurve` as 20 bytes; verify with a struct whose size you can check
+    independently (`VehicleTransmission` is 112, not 92).
+20. **The dump disagrees with itself on bools — dozens of properties share an offset.** **Cause:** not
+    a mismatch: bools are packed into one bitfield word, and the generated accessor reports the
+    word's first bool for every sibling. **Fix:** compare the word, then order the bools by
+    declaration; a shared offset with the same word size is agreement, not drift.
+21. **Seven classes cannot be reproduced from the shipped declaration, so you start doubting the
+    dump.** **Cause:** the copy of those classes in `BmGame.upk` is a different, smaller build than the
+    one the engine linked. **Fix:** this affects re-derivation offline, not naming: the names come from
+    absolute offsets in the running build's dump. Record the mismatch and move on.
 
 ## Assets
 
@@ -326,23 +424,36 @@ What is **not** verified, and must not be claimed:
 - **Textures:** 56 TGA files (DDS export was disabled).
 - **Audio:** 498 WEMs in the `SFX` WADs; `BML_Engine` (7.3 MB) with 17 events mapped to media;
   `BML_Burnout`, `BML_AUX` and `MK2_Engine` carved with the same tools.
-- **Not extracted:** any native tuning value. See below.
+- **Native layout:** 34 classes, 2,351 properties, 42 structs from the generated dump; 422 cooked
+  fields resolved, 414 named, 8 undecidable by offset.
 
-## What is not obtainable (the negative result)
+## The negative result, and how it fell
 
-Three independent checks say the Batmobile's **handling, mass and damage numbers are not readable
-from the shipped files**:
+For most of this project the note said the Batmobile's **handling, mass and damage numbers are not
+readable from the shipped files**. The three measurements behind that were real:
 
 1. The native CDO streams contain values but no names (gotcha 12).
 2. `GlobalPersistentCookerData.upk` supplies names and types but no usable offsets (gotcha 11).
 3. umodel cannot derive a property layout without the cooked script packages, which are compressed
-   (gotcha 13). A full-disk string census found the game's mass-member names **only** in GPCD, once
-   each — schema definitions, not values.
+   (gotcha 13), and a full-disk string census found the mass-member names only in GPCD, once each.
 
-The ini files have no tuning (gotcha 14), the Batmobile package contains no tuning `DataAsset`, and
-no published value table exists. A derived real-world estimate (power, top speed, 0–60) is a sanity
-band, not the game's internal number. **Any future claim of exact Arkham Knight Batmobile handling
-values should be treated as fabricated** unless it names the cooked script package it came from.
+What they add up to is narrower than "not obtainable": the install was **never shipping the name
+table this build needs**. GPCD is the *editor's* schema, and the copy in the package is a different,
+smaller build than the classes the engine linked — which is exactly why the layout walk could not be
+closed from it. The missing input was a class declaration from the build that was actually running.
+
+That is what a generated SDK is. BmSDK-AK's build reflects over the running game's `UClass` chain and
+writes every property with the offset the engine itself linked it to, so "the field at object+0x4A8"
+becomes a name without any struct walking. With it, **414 of the 422 Batmobile fields resolve**; the
+eight exceptions are the flattened screen-shake bools, recorded by offset and not guessed. The slot
+rules could then be checked instead of fitted (native-class section above), which is how the
+`AirControl*`, weapon-array and `0x318` errors were caught.
+
+What is still not established: the *values* are named but have not been driven in the destination
+game — that is the port's job, not the extraction's. And the seven classes listed above cannot be
+reproduced from the shipped declaration, so a future offline re-derivation of those is blocked until
+a dump of that exact build exists. A derived real-world estimate (power, top speed, 0–60) remains a
+sanity band, not the game's internal number.
 
 ## Open questions
 
@@ -350,13 +461,18 @@ values should be treated as fabricated** unless it names the cooked script packa
   none of the 3,266 packages swept, and its `Turbo`/`BattlemodeEngine` event bytes appear nowhere on
   disk outside the referencing serials. The remaining test is runtime file-access observation, not
   more static scraping.
-- **Can the cooked script packages be decompressed?** That is the only path to names for the native
-  CDO values, and it was not attempted.
-- **Do other vehicles export as cleanly?** Only the Batmobile package was tested; the extraction
-  recipe should be asset-generic, but that is unproven.
+- **The eight screen-shake bools.** Their flattened offset is ambiguous between `BMScreenShakeStruct`
+  and its `AdvancedOptions` child. One disassembly of the accessor, or one in-game bit test, settles it.
+- **Do the named values hold in game?** The names are measured; whether `AirControlYawTorqueFactorMax`
+  drives yaw the way the port assumes is a driving test on the destination side.
+- **Do other vehicles export as cleanly?** Only the Batmobile package was worked. The dump route is
+  asset-generic (any class in the running game), but that is unproven for another vehicle.
 
 ## Related and credits
 
+- [BmSDK-AK](https://github.com/Team-BmSDK/BmSDK-AK) (Eli Kramer / Team-BmSDK, MIT) — a scripting
+  platform that generates C# bindings from the running game; its class dump is what turned the cooked
+  offsets into names. Only the generated class declarations were used, and only for offline analysis.
 - [UE Viewer / umodel](https://github.com/gildor2/UEViewer) (Gildor) — the package reader that made
   the mesh, material and texture half of this cheap.
 - [vgmstream](https://github.com/vgmstream/vgmstream) — decodes Wwise Vorbis without codebook surgery.

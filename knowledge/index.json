@@ -904,7 +904,7 @@
  {
   "path": "games/batman-arkham-knight/scraping-the-batmobile-umodel-pskx-wwise.md",
   "kind": "game",
-  "title": "Scraping the Batmobile: umodel PSKX, property dumps and Wwise banks",
+  "title": "Scraping the Batmobile: umodel PSKX, native class offsets and Wwise banks",
   "game": "Batman: Arkham Knight",
   "games_also": [
    "Just Cause 3"
@@ -917,6 +917,7 @@
    "UE Viewer (umodel)",
    "vgmstream-cli",
    "custom Python UE3 package, WWAD and AkBank parsers",
+   "BmSDK-AK generated class bindings (class dump)",
    "Blender 5.2"
   ],
   "anti_cheat": "none \u2014 single-player, offline extraction from the user's own install",
@@ -931,10 +932,11 @@
   "humans": [
    "@NotTrevino"
   ],
-  "date": "2026-10-21",
+  "date": "2026-10-22",
   "links": [
    "https://github.com/gildor2/UEViewer",
-   "https://github.com/vgmstream/vgmstream"
+   "https://github.com/vgmstream/vgmstream",
+   "https://github.com/Team-BmSDK/BmSDK-AK"
   ],
   "tags": [
    "umodel",
@@ -946,7 +948,9 @@
    "materials",
    "textures",
    "batmobile",
-   "negative-result"
+   "native-classes",
+   "property-offsets",
+   "class-dump"
   ]
  },
  {
