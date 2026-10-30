@@ -5397,6 +5397,56 @@
   ]
  },
  {
+  "path": "games/minecraft/factorio-style-belts-power-and-ore-patches-as-horizon-rust-m.md",
+  "kind": "game",
+  "title": "Factorio-style belts, power and ore patches as Horizon (Rust Minecraft 26.3) WebAssembly mods",
+  "game": "Minecraft",
+  "games_also": [
+   "Factorio"
+  ],
+  "game_version": "Horizon v0.2.94 (launcher 0.2.21) over Minecraft Java 26.3 resources; source at horizon-rust/horizon f66f66c (2026-10-28); mod API 0.2 (content) + 0.3 (server)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "horizon-mod-sdk 0.1.0",
+   "cargo-horizon-mod 0.1.0",
+   "rustup stable-x86_64-pc-windows-gnu 1.99.1",
+   "wasm32-unknown-unknown",
+   "WinLibs mingw",
+   "wasmtime 48 (in the game)",
+   "Python 3.14 (texture/JSON generator)",
+   "Horizon launcher 0.2.21"
+  ],
+  "anti_cheat": "none: Horizon is an open-source client/server, mods are a supported feature; the game's own Mojang resources are fetched only for a signed-in Microsoft account that owns Java Edition (never bypassed)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Fable 5.1)"
+  ],
+  "humans": [],
+  "date": "2026-10-28",
+  "links": [
+   "https://github.com/horizon-rust/horizon",
+   "https://github.com/horizon-rust/horizon/blob/main/docs/mods.md",
+   "https://github.com/horizon-rust/horizon/blob/main/docs/modpacks.md",
+   "https://playhorizon.dev"
+  ],
+  "tags": [
+   "horizon",
+   "rust",
+   "webassembly",
+   "wasm-component",
+   "wit",
+   "server-mod",
+   "content-mod",
+   "factorio",
+   "conveyor",
+   "power-network",
+   "ore-generation",
+   "data-driven-blocks"
+  ]
+ },
+ {
   "path": "games/minecraft/half-life-2-guns-in-minecraft-passthrough-hl2-demo-under-win.md",
   "kind": "game",
   "title": "Half-Life 2 guns in Minecraft (passthrough, HL2 Demo under Wine on macOS)",
