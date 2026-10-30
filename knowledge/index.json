@@ -2670,6 +2670,48 @@
   ]
  },
  {
+  "path": "games/dragon-s-dogma-2/pactblade-a-custom-vocation-on-vsb-recoloured-effects-own-so.md",
+  "kind": "game",
+  "title": "Pactblade: a custom vocation on VSB - recoloured effects, own sound banks, binds, warps and crash rules",
+  "game": "Dragon's Dogma 2",
+  "games_also": [],
+  "game_version": "dd2.exe 4.1.0.0 (post-DLC), Steam 2054970 build 25920212; REFramework (nightly, Oct 2026)",
+  "platform": "windows",
+  "engine": "re-engine",
+  "route": "loader-api",
+  "tools": [
+   "REFramework (Lua)",
+   "_DragonCore 1.2.0 + VSB (Vocation & Skill Builder) 1.1.0",
+   "REE-Lib (efx read/write; the author's local, unpublished patch for the DD2New efx version 5965310)",
+   "ree-pak-cli (pack), vgmstream, ffmpeg"
+  ],
+  "anti_cheat": "none found; single-player only (online / pawn-share side effects untested)",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-24",
+  "links": [
+   "https://github.com/ntgoten/pactblade-scriptonly",
+   "https://github.com/praydog/REFramework",
+   "https://www.nexusmods.com/dragonsdogma2/mods/1916",
+   "https://www.nexusmods.com/dragonsdogma2/mods/1917",
+   "https://github.com/kagenocookie/RE-Engine-Lib",
+   "https://github.com/eigeen/ree-pak-rs",
+   "https://github.com/vgmstream/vgmstream"
+  ],
+  "tags": [
+   "custom-vocation",
+   "skills",
+   "effects",
+   "recolour",
+   "sound-banks",
+   "crashes",
+   "teleport"
+  ]
+ },
+ {
   "path": "games/dwarf-fortress/replace-the-dwarf-map-sprite-with-a-custom-32x32-sprite-stea.md",
   "kind": "game",
   "title": "Replace the dwarf map sprite with a custom 32x32 sprite (Steam, Linux)",
