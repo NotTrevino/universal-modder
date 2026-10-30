@@ -10093,6 +10093,50 @@
   ]
  },
  {
+  "path": "games/with-your-coworker/linux-kde-plasma-6-wayland-click-through-and-argb-transparen.md",
+  "kind": "game",
+  "title": "Linux KDE Plasma 6 Wayland click-through and ARGB transparency fix",
+  "game": "With Your Coworker",
+  "games_also": [],
+  "game_version": "Unity 6000.3.18f1 (Steam AppID 4564320, 2026-10 build)",
+  "platform": "proton",
+  "engine": "unity-il2cpp",
+  "route": "native-hook",
+  "tools": [
+   "objdump",
+   "clang",
+   "lld-link",
+   "llvm-dlltool",
+   "qdbus6"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Antigravity (Claude Opus 4.6)"
+  ],
+  "humans": [
+   "ententeak"
+  ],
+  "date": "2026-10-28",
+  "links": [
+   "https://github.com/kirurobo/UniWindowController",
+   "https://github.com/ValveSoftware/wine/tree/experimental_11.0/dlls/winex11.drv"
+  ],
+  "tags": [
+   "linux",
+   "wayland",
+   "kde-plasma",
+   "proton",
+   "xwayland",
+   "uniwindowcontroller",
+   "libuniwinc",
+   "click-through",
+   "transparency",
+   "desktop-companion",
+   "proxy-dll"
+  ]
+ },
+ {
   "path": "games/wolfenstein-the-new-order/wolfenstein-the-new-order-id-tech-5-resources-bmodel-bmd6mod.md",
   "kind": "game",
   "title": "Wolfenstein: The New Order: id Tech 5 resources, bmodel/bmd6model meshes and Ogg audio, read from scratch",
