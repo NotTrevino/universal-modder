@@ -7418,6 +7418,61 @@
   ]
  },
  {
+  "path": "games/skyrim-special-edition/cbbe-mesh-osd-tri-isolated-bodyslide-validation.md",
+  "kind": "game",
+  "title": "CBBE OSD/TRI validation, isolated BodySlide builds, and a tested morph/physics baseline",
+  "game": "Skyrim Special Edition",
+  "games_also": [],
+  "game_version": "Runtime test: 1.6.1170.0 with SKSE 2.2.6; separate inspected Steam executable metadata: 1.7.104.0",
+  "platform": "windows",
+  "engine": "creation",
+  "route": "asset-only",
+  "tools": [
+   "BodySlide/Outfit Studio 5.8.1.0",
+   "MO2 2.5.2",
+   "Node.js readers",
+   "RaceMenu AE 0.4.20.0",
+   "CBPC 1.6.2",
+   "local CBBE directory labelled 2.0.3",
+   "local XPMSSE directory labelled 5.06"
+  ],
+  "anti_cheat": "Single-player research profiles only; no online client, anti-cheat bypass, DRM removal or ownership-check change involved",
+  "status": "working",
+  "agents": [
+   "OpenCode (GPT-6.1 Sol)",
+   "OpenCode (GPT-6.1 Sol Fast)",
+   "OpenCode (GPT-6 Astra Fast)"
+  ],
+  "humans": [
+   "Kokuru"
+  ],
+  "date": "2026-10-28",
+  "links": [
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/tree/v5.8.1",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/blob/38139d40f74bc675a093db705fe7f4c0151d01ec/src/components/DiffData.cpp",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/blob/38139d40f74bc675a093db705fe7f4c0151d01ec/src/files/TriFile.cpp",
+   "https://github.com/ousnius/nifly/blob/6cb15fb5da71527b33cea8ff7913be8790e1c633/src/Skin.cpp",
+   "https://github.com/ianpatt/skse64/blob/25b72352adb6543fa6d0bd3795780672b2e238e0/skse64/PluginAPI.h",
+   "https://github.com/ianpatt/skse64/blob/25b72352adb6543fa6d0bd3795780672b2e238e0/skse64/PluginManager.cpp",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/wiki/Conversion-references-and-using-them",
+   "https://github.com/DaymareOn/hdtSMP64/tree/2215ec3ba09adf0843a3291ed0437a6ca6d385e2",
+   "https://github.com/Acro748/CBPCSSE/tree/fabd56ce8f8ac10cde17325f0bd61ecc8cbcda20"
+  ],
+  "tags": [
+   "cbbe",
+   "bodyslide",
+   "osd",
+   "tri",
+   "nif",
+   "morphs",
+   "isolated-build",
+   "mo2",
+   "skse",
+   "physics-routing",
+   "verification"
+  ]
+ },
+ {
   "path": "games/skyrim-special-edition/loot-detection-spell-papyrus-call-costs-and-lights.md",
   "kind": "game",
   "title": "A fast loot-detection spell with SKSE and po3: Papyrus call costs, threads, and lights on items",
@@ -9285,6 +9340,64 @@
    "jotunn",
    "custom-piece",
    "harmony"
+  ]
+ },
+ {
+  "path": "games/vampire-the-masquerade-bloodlines/longhair-outfit-proportions-from-skyrim-cbbe-3ba-source-data.md",
+  "kind": "game",
+  "title": "Bloodlines MDL2531 outfit transfer and native secondary motion: bind frames, pose provenance and receiver flags",
+  "game": "Vampire: The Masquerade - Bloodlines",
+  "games_also": [
+   "The Elder Scrolls V: Skyrim Special Edition"
+  ],
+  "game_version": "Local Version.inf 1.2; enabled Unofficial Patch Plus metadata 11.5.46.0; Fashionista portable MO2 profile",
+  "platform": "windows",
+  "engine": "source",
+  "route": "native-hook",
+  "tools": [
+   "Blender 4.5.15 LTS",
+   "BodySlide/Outfit Studio 5.8.1",
+   "SourceIO MDL2531/VTX107 readers",
+   "MO2 2.5.2",
+   "Zig 0.13.0 (x86)",
+   "Bullet 3.25",
+   "Python/NumPy",
+   "srctools"
+  ],
+  "anti_cheat": "Single-player Bloodlines instance; no anti-cheat signature found in bounded local scan, no multiplayer interaction or protection/ownership bypass",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (GPT-6.1 Sol)",
+   "OpenCode (GPT-6.1 Sol Fast)",
+   "OpenCode (GPT-6 Astra)",
+   "OpenCode (GPT-6 Astra Fast)"
+  ],
+  "humans": [
+   "Kokuru"
+  ],
+  "date": "2026-10-28",
+  "links": [
+   "https://github.com/REDxEYE/SourceIO/tree/fe24260b97ac03b899d9b5d4f0fd7b34772f3647",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/blob/59fca3a4787153e7349aa0fb01c716235f9f9b27/src/components/Automorph.cpp",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/wiki/Conversion-references-and-using-them",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/wiki/Making-a-new-conversion-reference-%28external-tools%29",
+   "https://github.com/ZeqMacaw/Crowbar/blob/0d46f3b6a694b74453db407c72c12a9685d8eb1d/Crowbar/Core/GameModel/SourceModel2531/SourceMdlFile2531.vb",
+   "https://github.com/c6-dev/vtmb-tweaks/blob/5d9ea803a35261fb2ad120737d8d2419ce893e72/vtmb-tweaks/dllmain.cpp",
+   "https://github.com/DaymareOn/hdtSMP64/tree/2215ec3ba09adf0843a3291ed0437a6ca6d385e2",
+   "https://github.com/bulletphysics/bullet3/tree/2c204c49e56ed15ec5fcfa71d199ab6d6570b3f5"
+  ],
+  "tags": [
+   "mdl2531",
+   "vtx107",
+   "source",
+   "body-proportions",
+   "conversion-carrier",
+   "animation",
+   "secondary-motion",
+   "native-hook",
+   "pose-provenance",
+   "mo2",
+   "verification"
   ]
  },
  {
